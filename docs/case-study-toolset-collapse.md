@@ -15,7 +15,9 @@ Asked to fetch and summarize a JS-heavy, client-rendered page, the model:
   page shell.
 - Burned a dozen vision calls on manually-supplied screenshots.
 
-66 tool calls in total, and the task still failed. Nothing caught it live:
+The session ran to 66 tool calls end to end (the curl and vision thrash
+above were the biggest chunks), and the task still failed. Nothing caught it
+live:
 the config loaded fine, every individual call "succeeded", and no single
 guard axis (repeated result, repeated narration, identical call) tripped.
 
