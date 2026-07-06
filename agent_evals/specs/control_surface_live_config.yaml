@@ -1,0 +1,31 @@
+id: telegram-control-surfaces-config
+description: >
+  Pins the control-surface state of a Telegram-enabled Hermes install and
+  guards both directions: surfaces enabled in the profile config must resolve
+  and dispatch deterministically (labels intercept, commands map), and
+  surfaces disabled in config must stay no-ops at dispatch — code still
+  present, but a callback or reaction produces nothing. Catches profile-config
+  drift (a feature enabled in the wrong file), malformed buttons silently
+  dropped at validation, and dispatch regressions. Edit the triggers to mirror
+  your own telegram config block; this example pins quick_keyboard on and
+  quick_actions / reaction_commands off.
+source:
+  type: control_surface_sim
+  install_path: ~/.hermes/hermes-agent                   # your Hermes install
+  config_path: ~/.hermes/profiles/<profile>/config.yaml  # the profile the gateway runs
+  triggers:
+    - { kind: config, expect: { quick_keyboard: true, reaction_commands: false, quick_actions: false } }
+    # quick keyboard enabled: labels must intercept deterministically
+    - { kind: keyboard_label, label: "⏹ Stop",      expect: { action: command, text: "/stop" } }
+    - { kind: keyboard_label, label: "📊 Status",    expect: { action: command, text: "/status" } }
+    - { kind: keyboard_label, label: "🆕 New chat",  expect: { action: command, text: "/new" } }
+    - { kind: keyboard_label, label: "📝 Summarize", expect: { action: prompt, contains: "Summarize" } }
+    # quick actions disabled: a qa:<key> callback must dispatch nothing
+    - { kind: quick_action, key: stop,  message_id: 424242, expect: { dispatch: none } }
+    - { kind: quick_action, key: retry, message_id: 424242, expect: { dispatch: none } }
+    - { kind: quick_action, key: more,  message_id: 424242, expect: { dispatch: none } }
+    # reaction commands disabled: previously mapped emojis must dispatch nothing
+    - { kind: reaction, emoji: "👎", expect: { dispatch: none } }
+    - { kind: reaction, emoji: "👍", expect: { dispatch: none } }
+checks:
+  - { type: control_surface_breach, max: 0 }

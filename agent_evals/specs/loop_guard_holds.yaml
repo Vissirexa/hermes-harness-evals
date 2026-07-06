@@ -1,0 +1,17 @@
+id: loop-guard-holds-baseline
+description: >
+  A healthy recorded session stays within every repetition guard threshold.
+  Use this shape as a regression baseline: after changing the harness, replay
+  your scenario through Hermes and point session_id/db_path at the fresh run.
+  Mirror the thresholds to your live guard config (e.g. if your harness halts
+  after 5 repeated results and 3 repeated narrations, keep max: 5 / max: 3
+  here) so a pass is positive evidence the guards did their job.
+source:
+  type: recorded_session
+  session_id: YOUR_SESSION_ID          # a healthy session from your own install
+  db_path: path/to/state.db            # the state.db that session lives in
+checks:
+  - { type: repeated_result,    max: 5, min_chars: 200 }
+  - { type: identical_tool_call, max: 8 }
+  - { type: repeated_narration, max: 3, min_chars: 40 }
+  - { type: total_tool_calls,   max: 120 }

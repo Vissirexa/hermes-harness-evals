@@ -1,0 +1,17 @@
+id: coding-smoke-live
+description: >
+  Fast live smoke test of the agent-drive plumbing: a small self-contained coding
+  task that should finish in a couple of turns with no loops. Confirms drive_live
+  can run Hermes headlessly and the guards see a clean transcript.
+source:
+  type: live
+  db_path: ~/.hermes/profiles/<profile>/state.db   # where your install records sessions
+  scenario_prompt: >
+    Write a Python function fib(n) that returns the nth Fibonacci number
+    iteratively (fib(0)=0, fib(1)=1). Reply with just the function, no explanation.
+  timeout: 240
+checks:
+  - { type: repeated_result,    max: 5, min_chars: 200 }
+  - { type: identical_tool_call, max: 8 }
+  - { type: repeated_narration, max: 3, min_chars: 40 }
+  - { type: total_tool_calls,   max: 20 }

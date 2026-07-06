@@ -1,0 +1,19 @@
+id: toolset-collapse-20260701-fixture
+description: >
+  Pinned known-bad session (expect: fail): a platform toolset config regression
+  (a toolsets value that should have been a list arrived as a JSON string)
+  silently collapsed the web/browser toolsets. With the real tools gone, the
+  model hallucinated web-tool names, then thrashed through ~30 raw curl
+  attempts against a JS-heavy page. This spec passes while the breach is still
+  visible in the recorded transcript, so the regression example stays honest.
+  The session db is not shipped: the spec pins the incident session from the
+  install where it happened and SKIPs elsewhere. The live counterpart is
+  specs/live/spa_page_fetch.yaml.
+expect: fail
+source:
+  type: recorded_session
+  session_id: 20260701_121806_a7ab3105
+  db_path: path/to/state.db            # not shipped — see description
+checks:
+  - { type: hallucinated_tool,   max: 0 }
+  - { type: total_tool_calls,    max: 40 }

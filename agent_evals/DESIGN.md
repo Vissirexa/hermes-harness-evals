@@ -37,8 +37,41 @@ history). This keeps regression examples honest — the eval suite itself
 notices if its evidence goes stale. Example of a real breach this catches:
 one recorded session has a narration line repeated 4× against a max of 3.
 
-Further source types (live agent-driving, deterministic control-surface
-simulation) build on the same Event contract and land with their harnesses.
+## Input mode: live agent-drive (`agent_evals/live.py`)
+
+`source.type: live` drives Hermes for real: `drive_live()` runs the scenario
+through `hermes -z/--oneshot` (headless: tools/memory load as normal, approvals
+auto-bypassed, prints only the final text), then reads the resulting transcript
+back through the *same* `load_transcript` path and runs the checks.
+
+`hermes -z` deliberately does not print a session id, so the driver brackets
+the run by time: it records the latest session start before, runs, then takes
+the newest session created after. A timeout is treated as a finding (the run
+never converged) and the partial session is still captured if one exists.
+
+Because live specs actually invoke Hermes (and can take minutes), they live in
+`agent_evals/specs/live/` and are NOT picked up by the default
+`python -m agent_evals.runner`. Run them explicitly:
+
+```
+python -m agent_evals.runner agent_evals/specs/live/coding_smoke.yaml
+```
+
+## Input mode: control-surface simulation (`agent_evals/control_surface.py`)
+
+`source.type: control_surface_sim` drives the Telegram adapter's deterministic
+dispatch layer (quick-keyboard labels, `qa:` quick-action callbacks, reaction
+commands) in a subprocess under the target install's own venv python, against
+the profile config the spec names — no Telegram, no LLM, runs in seconds. Each
+trigger carries an `expect:` block (action kind, exact text / substring,
+anchoring); every miss becomes an `eval-breach` event counted by the
+`control_surface_breach` check. This is the config-drift detector: a feature
+enabled in the wrong file, buttons dropped by validation, or an install that
+predates the feature all fail loud with an actionable message.
+
+The specs shipped under `agent_evals/specs/` pin real incidents from a
+development install. Their session dbs are not shipped, so they SKIP until
+pointed at your own recordings — each spec's description says what it pins.
 
 ## Adding a check
 
