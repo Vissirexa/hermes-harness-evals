@@ -1,0 +1,50 @@
+id: ts-impl-deep-equal
+category: implement
+difficulty: medium
+chunk_size: medium
+language: typescript
+tier: medium
+title: "Structural deep equality"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: deepEqual
+
+  ### Description
+  Implement a structural equality check.
+
+  ### Requirements
+  - Signature: `export function deepEqual(a: unknown, b: unknown): boolean`
+  - Primitives compare by value, with `Object.is` semantics so that
+    `deepEqual(NaN, NaN)` is `true` and `deepEqual(0, -0)` is `false`.
+  - Arrays are equal when they have the same length and deep-equal elements in order.
+  - Plain objects are equal when they have the same set of own enumerable keys
+    and deep-equal values. Key order does not matter.
+  - An array is never deep-equal to a non-array object.
+
+  Implement in solution.ts and export `deepEqual`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { deepEqual } from './solution';
+
+  describe('deepEqual', () => {
+    it('primitives', () => {
+      expect(deepEqual(1, 1)).toBe(true);
+      expect(deepEqual('a', 'b')).toBe(false);
+      expect(deepEqual(NaN, NaN)).toBe(true);
+      expect(deepEqual(0, -0)).toBe(false);
+    });
+    it('nested objects regardless of key order', () => {
+      expect(deepEqual({ a: 1, b: { c: 2 } }, { b: { c: 2 }, a: 1 })).toBe(true);
+      expect(deepEqual({ a: 1 }, { a: 2 })).toBe(false);
+    });
+    it('arrays', () => {
+      expect(deepEqual([1, [2, 3]], [1, [2, 3]])).toBe(true);
+      expect(deepEqual([1, 2], [1, 2, 3])).toBe(false);
+    });
+    it('differing key sets', () => {
+      expect(deepEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
+    });
+    it('array vs object', () => {
+      expect(deepEqual([], {})).toBe(false);
+    });
+  });

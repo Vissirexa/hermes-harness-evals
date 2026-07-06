@@ -1,0 +1,45 @@
+id: ts-impl-title-case
+category: implement
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Title-case a string"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: titleCase
+
+  ### Description
+  Implement `titleCase`.
+
+  ### Requirements
+  - Signature: `export function titleCase(text: string): string`
+  - Split on whitespace. For each word, uppercase the first character and
+    lowercase the rest of the word.
+  - Collapse runs of whitespace to a single space, and trim the ends.
+  - An apostrophe or hyphen inside a word does not start a new word
+    ("it's" -> "It's", not "It'S").
+  - Empty or whitespace-only input returns "".
+
+  Implement in solution.ts and export `titleCase`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { titleCase } from './solution';
+
+  describe('titleCase', () => {
+    it('capitalizes each word', () => {
+      expect(titleCase('hello world')).toBe('Hello World');
+    });
+    it('lowercases the rest', () => {
+      expect(titleCase('hELLO WORLD')).toBe('Hello World');
+    });
+    it('collapses and trims whitespace', () => {
+      expect(titleCase('  foo   bar  ')).toBe('Foo Bar');
+    });
+    it('keeps apostrophes inside words', () => {
+      expect(titleCase("it's a test")).toBe("It's A Test");
+    });
+    it('returns empty for blank input', () => {
+      expect(titleCase('   ')).toBe('');
+    });
+  });

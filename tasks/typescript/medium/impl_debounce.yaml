@@ -1,0 +1,57 @@
+id: ts-impl-debounce
+category: implement
+difficulty: medium
+chunk_size: medium
+language: typescript
+tier: medium
+title: "Trailing-edge debounce"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: debounce
+
+  ### Description
+  Implement a trailing-edge `debounce`.
+
+  ### Requirements
+  - Signature: `export function debounce<F extends (...args: any[]) => void>(fn: F, wait: number): (...args: Parameters<F>) => void`
+  - Returns a function that delays calling `fn` until `wait` ms have passed since
+    the most recent call.
+  - Rapid calls collapse into a single call, using the arguments of the LAST call.
+  - Uses setTimeout / clearTimeout (the tests drive fake timers).
+
+  Implement in solution.ts and export `debounce`.
+test_code: |
+  import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+  import { debounce } from './solution';
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  describe('debounce', () => {
+    it('fires once after the wait', () => {
+      const fn = vi.fn();
+      const d = debounce(fn, 100);
+      d(); d(); d();
+      expect(fn).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(100);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+    it('uses the latest arguments', () => {
+      const fn = vi.fn();
+      const d = debounce(fn, 50);
+      d(1); d(2); d(3);
+      vi.advanceTimersByTime(50);
+      expect(fn).toHaveBeenCalledWith(3);
+    });
+    it('resets the timer on each call', () => {
+      const fn = vi.fn();
+      const d = debounce(fn, 100);
+      d();
+      vi.advanceTimersByTime(60);
+      d();
+      vi.advanceTimersByTime(60);
+      expect(fn).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(40);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+  });

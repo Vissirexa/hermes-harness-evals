@@ -1,0 +1,45 @@
+id: impl-simplify-path
+category: implement
+difficulty: senior
+chunk_size: medium
+language: python
+tier: hard
+title: "Canonicalize a Unix file path"
+solution_file: solution.py
+prompt: |
+  ## Ticket: simplify_path
+
+  ### Description
+  Implement `simplify_path(path)` to canonicalize an absolute Unix-style path.
+
+  ### Requirements
+  - `simplify_path(path: str) -> str`
+  - Treat the input as an absolute path. Collapse:
+    - `.` (current directory) -> removed
+    - `..` (parent) -> pop the previous directory if any (at root it is a no-op)
+    - any run of `/` -> a single separator
+  - The result always starts with exactly one `/` and has no trailing `/`,
+    except the root which is just `/`.
+
+  Implement in solution.py.
+test_code: |
+  from solution import simplify_path
+
+  def test_trailing_slash():
+      assert simplify_path("/home/") == "/home"
+
+  def test_double_dot():
+      assert simplify_path("/a/./b/../../c/") == "/c"
+
+  def test_multiple_slashes():
+      assert simplify_path("/a//b////c/d//") == "/a/b/c/d"
+
+  def test_root():
+      assert simplify_path("/") == "/"
+      assert simplify_path("/../") == "/"
+
+  def test_single_dot():
+      assert simplify_path("/./") == "/"
+
+  def test_complex():
+      assert simplify_path("/x/y/../../z/./w") == "/z/w"

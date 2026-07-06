@@ -1,0 +1,47 @@
+id: ts-impl-json-get
+category: implement
+difficulty: hard
+chunk_size: medium
+language: typescript
+tier: hard
+title: "Safe nested get by path string"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: getPath
+
+  ### Description
+  Implement a safe deep getter addressed by a path string.
+
+  ### Requirements
+  - Signature: `export function getPath(obj: unknown, path: string, defaultValue?: unknown): unknown`
+  - Support dot notation and bracketed array indices, e.g. `"a.b[0].c"`.
+  - Return the value at the path if present.
+  - If any segment is missing (or you index past an array / into a non-object),
+    return `defaultValue` (which itself defaults to `undefined`).
+  - A value that exists but is `undefined` should still yield `defaultValue`;
+    a value that exists and is `null` should be returned as `null`.
+
+  Implement in solution.ts and export `getPath`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { getPath } from './solution';
+
+  const obj = { a: { b: [{ c: 1 }, { c: 2 }] }, x: null };
+
+  describe('getPath', () => {
+    it('reads nested values', () => {
+      expect(getPath(obj, 'a.b[0].c')).toBe(1);
+      expect(getPath(obj, 'a.b[1].c')).toBe(2);
+    });
+    it('returns the default for missing paths', () => {
+      expect(getPath(obj, 'a.b[5].c', 'none')).toBe('none');
+      expect(getPath(obj, 'a.z', 'none')).toBe('none');
+      expect(getPath(obj, 'q.r.s')).toBeUndefined();
+    });
+    it('returns null when the value is null', () => {
+      expect(getPath(obj, 'x', 'def')).toBeNull();
+    });
+    it('does not index into non-objects', () => {
+      expect(getPath({ a: 5 }, 'a.b', 'd')).toBe('d');
+    });
+  });

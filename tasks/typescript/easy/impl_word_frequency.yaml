@@ -1,0 +1,47 @@
+id: ts-impl-word-frequency
+category: implement
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Count word frequencies in a string"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: wordFrequency
+
+  ### Description
+  Implement `wordFrequency`, returning a count of each word in a string.
+
+  ### Requirements
+  - Signature: `export function wordFrequency(text: string): Record<string, number>`
+  - Words are matched case-insensitively and counted in lowercase.
+  - A "word" is a maximal run of the characters a-z, 0-9, or apostrophe (`'`).
+    Everything else (spaces, punctuation, newlines) separates words.
+  - Empty or whitespace-only input returns `{}`.
+
+  Implement in solution.ts and export `wordFrequency`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { wordFrequency } from './solution';
+
+  describe('wordFrequency', () => {
+    it('counts repeated words', () => {
+      expect(wordFrequency('the cat the dog the')).toEqual({ the: 3, cat: 1, dog: 1 });
+    });
+    it('is case-insensitive', () => {
+      expect(wordFrequency('Go go GO')).toEqual({ go: 3 });
+    });
+    it('splits on punctuation', () => {
+      expect(wordFrequency('hi, hi! bye.')).toEqual({ hi: 2, bye: 1 });
+    });
+    it('keeps apostrophes inside words', () => {
+      expect(wordFrequency("don't don't stop")).toEqual({ "don't": 2, stop: 1 });
+    });
+    it('returns {} for empty input', () => {
+      expect(wordFrequency('')).toEqual({});
+      expect(wordFrequency('   \n  ')).toEqual({});
+    });
+    it('counts digits as words', () => {
+      expect(wordFrequency('a1 a1 b2')).toEqual({ a1: 2, b2: 1 });
+    });
+  });

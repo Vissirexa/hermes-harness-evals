@@ -1,0 +1,72 @@
+id: ts-impl-lru-cache
+category: implement
+difficulty: medium
+chunk_size: medium
+language: typescript
+tier: medium
+title: "Generic LRU cache"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: LRUCache
+
+  ### Description
+  Implement a generic least-recently-used cache.
+
+  ### Requirements
+  - `export class LRUCache<K, V>` constructed with a positive integer capacity.
+  - `get(key: K): V | undefined` returns the value and marks the key as most
+    recently used. Returns `undefined` for a missing key.
+  - `put(key: K, value: V): void` inserts/updates and marks the key most
+    recently used. Updating an existing key must not grow `size`.
+  - When inserting a new key would exceed capacity, evict the least recently
+    used key first.
+  - `size` is a readonly accessor returning the current entry count.
+  - A capacity that is not a positive integer throws a `RangeError`.
+
+  Implement in solution.ts and export `LRUCache`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { LRUCache } from './solution';
+
+  describe('LRUCache', () => {
+    it('stores and retrieves', () => {
+      const c = new LRUCache<string, number>(2);
+      c.put('a', 1);
+      expect(c.get('a')).toBe(1);
+      expect(c.size).toBe(1);
+    });
+    it('returns undefined for missing keys', () => {
+      const c = new LRUCache<string, number>(2);
+      expect(c.get('nope')).toBeUndefined();
+    });
+    it('evicts the least recently used', () => {
+      const c = new LRUCache<string, number>(2);
+      c.put('a', 1);
+      c.put('b', 2);
+      c.put('c', 3); // evicts 'a'
+      expect(c.get('a')).toBeUndefined();
+      expect(c.get('b')).toBe(2);
+      expect(c.get('c')).toBe(3);
+      expect(c.size).toBe(2);
+    });
+    it('get marks recency', () => {
+      const c = new LRUCache<string, number>(2);
+      c.put('a', 1);
+      c.put('b', 2);
+      c.get('a');     // 'a' now most recent
+      c.put('c', 3);  // evicts 'b'
+      expect(c.get('b')).toBeUndefined();
+      expect(c.get('a')).toBe(1);
+    });
+    it('updating an existing key does not grow size', () => {
+      const c = new LRUCache<string, number>(2);
+      c.put('a', 1);
+      c.put('a', 99);
+      expect(c.size).toBe(1);
+      expect(c.get('a')).toBe(99);
+    });
+    it('throws on bad capacity', () => {
+      expect(() => new LRUCache(0)).toThrow(RangeError);
+      expect(() => new LRUCache(-2)).toThrow(RangeError);
+    });
+  });

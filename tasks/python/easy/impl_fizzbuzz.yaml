@@ -1,0 +1,44 @@
+id: impl-fizzbuzz
+category: implement
+difficulty: junior
+chunk_size: small
+language: python
+tier: easy
+title: "Classic FizzBuzz as a list"
+solution_file: solution.py
+prompt: |
+  ## Ticket: fizzbuzz
+
+  ### Description
+  Implement `fizzbuzz(n)` returning the FizzBuzz sequence for 1..n.
+
+  ### Requirements
+  - `fizzbuzz(n: int) -> list[str]`
+  - For each integer i from 1 to n inclusive, append:
+    - "FizzBuzz" if i is divisible by both 3 and 5
+    - "Fizz" if divisible by 3
+    - "Buzz" if divisible by 5
+    - otherwise the number as a string
+  - `n <= 0` returns `[]`.
+
+  Implement in solution.py.
+test_code: |
+  from solution import fizzbuzz
+
+  def test_basic():
+      assert fizzbuzz(5) == ["1", "2", "Fizz", "4", "Buzz"]
+
+  def test_fizzbuzz_15():
+      assert fizzbuzz(15)[-1] == "FizzBuzz"
+
+  def test_fizz_and_buzz():
+      out = fizzbuzz(15)
+      assert out[2] == "Fizz"   # 3
+      assert out[4] == "Buzz"   # 5
+
+  def test_zero_and_negative():
+      assert fizzbuzz(0) == []
+      assert fizzbuzz(-3) == []
+
+  def test_length():
+      assert len(fizzbuzz(100)) == 100

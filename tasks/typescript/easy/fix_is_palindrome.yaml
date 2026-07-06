@@ -1,0 +1,48 @@
+id: ts-fix-is-palindrome
+category: fix
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Fix a palindrome checker"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: isPalindrome ignores the rules
+
+  ### Description
+  This `isPalindrome` is supposed to ignore case and any non-alphanumeric
+  characters, but it currently compares the raw string. Fix it.
+
+  ### Current (buggy) code
+  ```typescript
+  export function isPalindrome(s: string): boolean {
+    return s === s.split('').reverse().join('');
+  }
+  ```
+
+  ### Requirements
+  - Consider only alphanumeric characters, compared case-insensitively.
+  - An empty string (or a string with no alphanumerics) is a palindrome.
+  - Return a boolean.
+
+  Return the corrected solution.ts exporting `isPalindrome`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { isPalindrome } from './solution';
+
+  describe('isPalindrome', () => {
+    it('ignores punctuation and case', () => {
+      expect(isPalindrome('A man, a plan, a canal: Panama')).toBe(true);
+    });
+    it('detects non-palindromes', () => {
+      expect(isPalindrome('race a car')).toBe(false);
+    });
+    it('treats empty as palindrome', () => {
+      expect(isPalindrome('')).toBe(true);
+      expect(isPalindrome('.,!')).toBe(true);
+    });
+    it('simple cases', () => {
+      expect(isPalindrome('racecar')).toBe(true);
+      expect(isPalindrome('Ab')).toBe(false);
+    });
+  });

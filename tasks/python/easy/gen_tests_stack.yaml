@@ -1,0 +1,119 @@
+id: gen-tests-stack
+category: test_gen
+difficulty: junior
+chunk_size: small
+language: python
+title: "Write tests for a Stack class"
+solution_file: solution.py
+context_files:
+  stack.py: |
+    class Stack:
+        def __init__(self):
+            self._items = []
+
+        def push(self, item):
+            """Add item to top of stack."""
+            self._items.append(item)
+
+        def pop(self):
+            """Remove and return top item. Raises IndexError if empty."""
+            if not self._items:
+                raise IndexError("pop from empty stack")
+            return self._items.pop()
+
+        def peek(self):
+            """Return top item without removing. Raises IndexError if empty."""
+            if not self._items:
+                raise IndexError("peek at empty stack")
+            return self._items[-1]
+
+        def is_empty(self) -> bool:
+            """Return True if stack has no items."""
+            return len(self._items) == 0
+
+        def size(self) -> int:
+            """Return number of items in stack."""
+            return len(self._items)
+prompt: |
+  ## Ticket: Write comprehensive tests for our Stack class
+
+  ### Description
+  We have a Stack implementation that needs test coverage before we refactor it.
+  Write a pytest test suite that thoroughly tests all methods and edge cases.
+
+  ### Context — the code to test
+  ```python
+  class Stack:
+      def __init__(self):
+          self._items = []
+
+      def push(self, item):
+          """Add item to top of stack."""
+          self._items.append(item)
+
+      def pop(self):
+          """Remove and return top item. Raises IndexError if empty."""
+          if not self._items:
+              raise IndexError("pop from empty stack")
+          return self._items.pop()
+
+      def peek(self):
+          """Return top item without removing. Raises IndexError if empty."""
+          if not self._items:
+              raise IndexError("peek at empty stack")
+          return self._items[-1]
+
+      def is_empty(self) -> bool:
+          """Return True if stack has no items."""
+          return len(self._items) == 0
+
+      def size(self) -> int:
+          """Return number of items in stack."""
+          return len(self._items)
+  ```
+
+  ### Requirements
+  - Use pytest (not unittest)
+  - Test every public method
+  - Test edge cases: empty stack operations, single element, many elements
+  - Test that pop/peek raise IndexError on empty stack (use pytest.raises)
+  - Tests should be in a file that imports Stack from a module called `stack`
+  - Each test function should test one behavior
+
+  Put your test code in solution.py.
+test_code: |
+  import subprocess
+  import sys
+  import os
+
+  def test_model_tests_run_and_pass():
+      """The model's tests, run against the known-good Stack, should all pass."""
+      result = subprocess.run(
+          [sys.executable, "-m", "pytest", "solution.py", "-v", "--tb=short"],
+          capture_output=True, text=True,
+          cwd=os.path.dirname(os.path.abspath(__file__)),
+          timeout=30,
+      )
+      assert result.returncode == 0, (
+          f"Model tests failed:\n{result.stdout}\n{result.stderr}"
+      )
+
+  def test_model_tests_have_breadth():
+      """Model should have written at least 5 test functions."""
+      with open("solution.py") as f:
+          content = f.read()
+      test_count = content.count("def test_")
+      assert test_count >= 5, f"Expected >= 5 test functions, found {test_count}"
+
+  def test_model_tests_cover_error_cases():
+      """Model should test IndexError on empty stack."""
+      with open("solution.py") as f:
+          content = f.read()
+      assert "IndexError" in content, "Tests should verify IndexError on empty stack"
+
+  def test_model_tests_use_push_and_pop():
+      """Tests should exercise both push and pop."""
+      with open("solution.py") as f:
+          content = f.read()
+      assert "push" in content, "Tests should use push"
+      assert "pop" in content, "Tests should use pop"

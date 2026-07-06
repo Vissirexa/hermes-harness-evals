@@ -1,0 +1,52 @@
+id: ts-impl-topo-sort
+category: implement
+difficulty: hard
+chunk_size: medium
+language: typescript
+tier: hard
+title: "Deterministic topological sort"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: topoSort
+
+  ### Description
+  Implement `topoSort(graph)` returning a topological ordering.
+
+  ### Requirements
+  - Signature: `export function topoSort(graph: Record<string, string[]>): string[]`
+  - `graph` maps each node to a list of nodes it depends on. An edge `node -> dep`
+    means `dep` must appear BEFORE `node` in the output.
+  - Every node appears as a key; dependency lists reference keys.
+  - Deterministic ordering: when several nodes are ready (all deps already placed),
+    pick them in ascending sorted order.
+  - Throw an `Error` if the graph contains a cycle.
+  - An empty graph returns `[]`.
+
+  Implement in solution.ts and export `topoSort`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { topoSort } from './solution';
+
+  describe('topoSort', () => {
+    it('linear chain', () => {
+      expect(topoSort({ a: [], b: ['a'], c: ['b'] })).toEqual(['a', 'b', 'c']);
+    });
+    it('deterministic tiebreak', () => {
+      expect(topoSort({ a: [], b: [], c: ['a', 'b'] })).toEqual(['a', 'b', 'c']);
+    });
+    it('diamond', () => {
+      expect(topoSort({ d: ['b', 'c'], b: ['a'], c: ['a'], a: [] })).toEqual(['a', 'b', 'c', 'd']);
+    });
+    it('empty', () => {
+      expect(topoSort({})).toEqual([]);
+    });
+    it('respects dependencies', () => {
+      const order = topoSort({ shirt: [], tie: ['shirt'], jacket: ['tie'] });
+      expect(order.indexOf('shirt')).toBeLessThan(order.indexOf('tie'));
+      expect(order.indexOf('tie')).toBeLessThan(order.indexOf('jacket'));
+    });
+    it('throws on a cycle', () => {
+      expect(() => topoSort({ a: ['b'], b: ['a'] })).toThrow();
+      expect(() => topoSort({ a: ['a'] })).toThrow();
+    });
+  });

@@ -1,0 +1,59 @@
+id: impl-intervals
+category: implement
+difficulty: senior
+chunk_size: medium
+language: python
+title: "Merge and insert intervals"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Interval merging utilities
+
+  ### Description
+  Implement two functions operating on closed integer intervals represented
+  as `[start, end]` lists (start <= end).
+
+  ### Requirements
+  - `merge(intervals: list[list[int]]) -> list[list[int]]`
+    Returns the intervals merged so that no two overlap, sorted ascending by
+    start. Intervals that merely touch (e.g. `[1,2]` and `[2,3]`) are
+    considered overlapping and must be merged into `[1,3]`. Input may be
+    unsorted. An empty input returns `[]`.
+  - `insert(intervals: list[list[int]], new: list[int]) -> list[list[int]]`
+    Inserts `new` into an already sorted, non-overlapping `intervals` list and
+    returns the result merged and sorted. Touching intervals merge.
+  - Do not mutate the caller's input lists.
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  from solution import merge, insert
+
+  def test_merge_basic():
+      assert merge([[1,3],[2,6],[8,10],[15,18]]) == [[1,6],[8,10],[15,18]]
+  def test_merge_touching():
+      assert merge([[1,2],[2,3]]) == [[1,3]]
+  def test_merge_unsorted():
+      assert merge([[8,10],[1,3],[2,6]]) == [[1,6],[8,10]]
+  def test_merge_contained():
+      assert merge([[1,10],[2,3],[4,5]]) == [[1,10]]
+  def test_merge_empty():
+      assert merge([]) == []
+  def test_merge_single():
+      assert merge([[5,7]]) == [[5,7]]
+  def test_merge_no_overlap():
+      assert merge([[1,2],[4,5]]) == [[1,2],[4,5]]
+
+  def test_insert_middle():
+      assert insert([[1,3],[6,9]], [2,5]) == [[1,5],[6,9]]
+  def test_insert_overlap_many():
+      assert insert([[1,2],[3,5],[6,7],[8,10],[12,16]], [4,8]) == [[1,2],[3,10],[12,16]]
+  def test_insert_end():
+      assert insert([[1,3]], [5,7]) == [[1,3],[5,7]]
+  def test_insert_empty():
+      assert insert([], [2,5]) == [[2,5]]
+  def test_insert_touching():
+      assert insert([[1,2],[5,6]], [2,5]) == [[1,6]]
+
+  def test_no_mutation():
+      data = [[1,3],[6,9]]
+      insert(data, [2,5])
+      assert data == [[1,3],[6,9]]

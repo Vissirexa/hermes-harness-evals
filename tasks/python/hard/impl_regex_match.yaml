@@ -1,0 +1,43 @@
+id: impl-regex-match
+category: implement
+difficulty: senior
+chunk_size: medium
+language: python
+title: "Implement regex matching with '.' and '*'"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Implement a minimal regular-expression matcher
+
+  ### Description
+  Implement `is_match(pattern: str, text: str) -> bool` that returns whether
+  `pattern` matches the ENTIRE `text` (full match, not a substring search).
+  Do NOT use the `re` module.
+
+  ### Requirements
+  - `.` matches any single character.
+  - `*` matches zero or more of the *preceding* element (a literal char or `.`).
+  - All other characters match themselves literally.
+  - The match must cover the entire input string.
+  - A `*` always has a valid preceding element (no need to handle a leading `*`).
+  - Do NOT import or use the `re` module.
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  from solution import is_match
+
+  def test_literal(): assert is_match("abc", "abc") is True
+  def test_literal_no(): assert is_match("abc", "abd") is False
+  def test_full_match_only(): assert is_match("abc", "abcd") is False
+  def test_dot(): assert is_match("a.c", "abc") is True
+  def test_star_empty(): assert is_match("a*", "") is True
+  def test_star_many(): assert is_match("a*", "aaaa") is True
+  def test_ab_star(): assert is_match("ab*", "a") is True
+  def test_ab_star_c(): assert is_match("ab*c", "ac") is True
+  def test_dot_star(): assert is_match(".*", "anything goes") is True
+  def test_a_star_b(): assert is_match("a*b", "b") is True
+  def test_a_star_b2(): assert is_match("a*b", "aaab") is True
+  def test_empty_both(): assert is_match("", "") is True
+  def test_empty_pat(): assert is_match("", "a") is False
+  def test_mixed(): assert is_match("a.b*c", "axc") is True
+  def test_mixed_no(): assert is_match("a.b*c", "axbbd") is False
+  def test_c_star_a_star_b(): assert is_match("c*a*b", "aab") is True

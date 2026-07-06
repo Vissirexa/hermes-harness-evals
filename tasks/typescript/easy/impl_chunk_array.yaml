@@ -1,0 +1,53 @@
+id: ts-impl-chunk-array
+category: implement
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Split an array into fixed-size chunks"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: chunkArray
+
+  ### Description
+  Implement a generic `chunkArray` utility.
+
+  ### Requirements
+  - Signature: `export function chunkArray<T>(arr: T[], size: number): T[][]`
+  - Split `arr` into consecutive sub-arrays of length `size`.
+  - The final chunk may be shorter if the array does not divide evenly.
+  - An empty input array returns `[]`.
+  - If `size` is not a positive integer, throw a `RangeError`.
+  - Do not mutate the input array.
+
+  Implement in solution.ts and export `chunkArray`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { chunkArray } from './solution';
+
+  describe('chunkArray', () => {
+    it('splits evenly', () => {
+      expect(chunkArray([1, 2, 3, 4], 2)).toEqual([[1, 2], [3, 4]]);
+    });
+    it('keeps a short final chunk', () => {
+      expect(chunkArray([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    });
+    it('handles size larger than the array', () => {
+      expect(chunkArray([1, 2], 5)).toEqual([[1, 2]]);
+    });
+    it('returns [] for an empty array', () => {
+      expect(chunkArray([], 3)).toEqual([]);
+    });
+    it('works with size 1', () => {
+      expect(chunkArray(['a', 'b'], 1)).toEqual([['a'], ['b']]);
+    });
+    it('throws on a non-positive size', () => {
+      expect(() => chunkArray([1, 2], 0)).toThrow(RangeError);
+      expect(() => chunkArray([1, 2], -1)).toThrow(RangeError);
+    });
+    it('does not mutate the input', () => {
+      const input = [1, 2, 3];
+      chunkArray(input, 2);
+      expect(input).toEqual([1, 2, 3]);
+    });
+  });

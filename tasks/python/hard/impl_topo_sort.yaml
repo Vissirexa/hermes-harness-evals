@@ -1,0 +1,58 @@
+id: impl-topo-sort
+category: implement
+difficulty: senior
+chunk_size: medium
+language: python
+title: "Topological sort with cycle detection"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Deterministic topological sort
+
+  ### Description
+  Implement `topo_sort(graph: dict) -> list` returning a topological ordering
+  of a directed graph.
+
+  ### Requirements
+  - `graph` maps each node to a list of nodes it depends on
+    (i.e. an edge `node -> dep` means `dep` must come BEFORE `node` in the
+    output). Every node appears as a key; dependency lists may reference
+    nodes that are also keys.
+  - Return a list of all nodes such that every dependency precedes the node
+    that depends on it.
+  - Ordering must be DETERMINISTIC: when multiple nodes are ready (all their
+    dependencies already placed), choose them in ascending sorted order.
+  - If the graph contains a cycle, raise `ValueError`.
+  - An empty graph returns `[]`.
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  import pytest
+  from solution import topo_sort
+
+  def test_linear():
+      assert topo_sort({"a": [], "b": ["a"], "c": ["b"]}) == ["a", "b", "c"]
+  def test_deterministic_tiebreak():
+      # a and b both ready; ascending order -> a before b
+      assert topo_sort({"a": [], "b": [], "c": ["a", "b"]}) == ["a", "b", "c"]
+  def test_diamond():
+      g = {"d": ["b", "c"], "b": ["a"], "c": ["a"], "a": []}
+      assert topo_sort(g) == ["a", "b", "c", "d"]
+  def test_empty():
+      assert topo_sort({}) == []
+  def test_single():
+      assert topo_sort({"x": []}) == ["x"]
+  def test_independent():
+      assert topo_sort({"c": [], "a": [], "b": []}) == ["a", "b", "c"]
+  def test_cycle():
+      with pytest.raises(ValueError):
+          topo_sort({"a": ["b"], "b": ["a"]})
+  def test_self_cycle():
+      with pytest.raises(ValueError):
+          topo_sort({"a": ["a"]})
+  def test_valid_is_topological():
+      g = {"shirt": [], "tie": ["shirt"], "belt": ["shirt"], "jacket": ["tie", "belt"]}
+      order = topo_sort(g)
+      assert order.index("shirt") < order.index("tie")
+      assert order.index("shirt") < order.index("belt")
+      assert order.index("tie") < order.index("jacket")
+      assert order.index("belt") < order.index("jacket")

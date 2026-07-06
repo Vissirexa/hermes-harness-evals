@@ -1,0 +1,53 @@
+id: ts-impl-retry-async
+category: implement
+difficulty: medium
+chunk_size: medium
+language: typescript
+tier: medium
+title: "Async retry with attempt budget"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: retryAsync
+
+  ### Description
+  Implement an async retry helper.
+
+  ### Requirements
+  - Signature: `export function retryAsync<T>(fn: () => Promise<T>, opts: { retries: number; delayMs?: number }): Promise<T>`
+  - Call `fn`. If it rejects, retry up to `retries` more times (so the total
+    number of attempts is `retries + 1`).
+  - Wait `delayMs` (default 0) between attempts.
+  - Resolve with the first successful result.
+  - If every attempt rejects, reject with the LAST error.
+
+  Implement in solution.ts and export `retryAsync`.
+test_code: |
+  import { describe, it, expect, vi } from 'vitest';
+  import { retryAsync } from './solution';
+
+  describe('retryAsync', () => {
+    it('resolves on first success', async () => {
+      const fn = vi.fn(async () => 42);
+      await expect(retryAsync(fn, { retries: 3 })).resolves.toBe(42);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+    it('retries until success', async () => {
+      let n = 0;
+      const fn = vi.fn(async () => {
+        n += 1;
+        if (n < 3) throw new Error('boom');
+        return 'ok';
+      });
+      await expect(retryAsync(fn, { retries: 5 })).resolves.toBe('ok');
+      expect(fn).toHaveBeenCalledTimes(3);
+    });
+    it('rejects with the last error after exhausting retries', async () => {
+      let n = 0;
+      const fn = vi.fn(async () => {
+        n += 1;
+        throw new Error(`fail-${n}`);
+      });
+      await expect(retryAsync(fn, { retries: 2 })).rejects.toThrow('fail-3');
+      expect(fn).toHaveBeenCalledTimes(3);
+    });
+  });

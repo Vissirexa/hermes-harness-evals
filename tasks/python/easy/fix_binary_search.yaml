@@ -1,0 +1,86 @@
+id: fix-binary-search
+category: fix
+difficulty: junior
+chunk_size: small
+language: python
+title: "Fix two bugs in binary search"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Fix binary search implementation
+
+  ### Description
+  Our binary search has two reported bugs. Users report infinite loops on some
+  inputs and failure to find the last element. Fix both bugs.
+
+  ### Context — the buggy code
+  ```python
+  def binary_search(arr: list[int], target: int) -> int:
+      """Return index of target in sorted arr, or -1 if not found."""
+      left = 0
+      right = len(arr) - 1
+      while left < right:
+          mid = (left + right) // 2
+          if arr[mid] == target:
+              return mid
+          elif arr[mid] < target:
+              left = mid
+          else:
+              right = mid - 1
+      return -1
+  ```
+
+  ### Bugs
+  1. Infinite loop: when arr[mid] < target, setting left = mid doesn't advance
+     the search (e.g., arr=[1,2,3], target=3 loops forever).
+  2. Misses last element: loop condition `left < right` exits before checking
+     the case where left == right (e.g., single-element array).
+
+  ### Requirements
+  - Fix both bugs
+  - Keep the same function signature
+  - Standard iterative binary search behavior
+
+  Return the corrected function in solution.py.
+test_code: |
+  from solution import binary_search
+
+  def test_finds_first():
+      assert binary_search([1, 2, 3, 4, 5], 1) == 0
+
+  def test_finds_last():
+      assert binary_search([1, 2, 3, 4, 5], 5) == 4
+
+  def test_finds_middle():
+      assert binary_search([1, 2, 3, 4, 5], 3) == 2
+
+  def test_not_found():
+      assert binary_search([1, 2, 3, 4, 5], 6) == -1
+
+  def test_empty_array():
+      assert binary_search([], 1) == -1
+
+  def test_single_element_found():
+      assert binary_search([42], 42) == 0
+
+  def test_single_element_not_found():
+      assert binary_search([42], 99) == -1
+
+  def test_two_elements():
+      assert binary_search([1, 2], 2) == 1
+      assert binary_search([1, 2], 1) == 0
+
+  def test_no_infinite_loop():
+      """The old bug: searching for 3 in [1,2,3] caused infinite loop."""
+      import signal, os
+      def timeout_handler(signum, frame):
+          raise TimeoutError("binary_search appears to infinite loop")
+      if os.name != 'nt':
+          old = signal.signal(signal.SIGALRM, timeout_handler)
+          signal.alarm(2)
+      try:
+          result = binary_search([1, 2, 3], 3)
+          assert result == 2
+      finally:
+          if os.name != 'nt':
+              signal.alarm(0)
+              signal.signal(signal.SIGALRM, old)

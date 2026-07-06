@@ -1,0 +1,136 @@
+id: refactor-to-dataclass
+category: refactor
+difficulty: mid
+chunk_size: medium
+language: python
+title: "Refactor dict-based records to dataclasses"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Refactor user record handling from raw dicts to dataclasses
+
+  ### Description
+  Our user management module currently passes user records as raw dicts.
+  This causes typo bugs and makes the code hard to reason about. Refactor
+  to use dataclasses while keeping all the same behavior.
+
+  ### Context — current code to refactor
+  ```python
+  def create_user(name: str, email: str, role: str = "viewer") -> dict:
+      """Create a new user record."""
+      if not name or not email:
+          raise ValueError("name and email are required")
+      if "@" not in email:
+          raise ValueError("invalid email")
+      if role not in ("viewer", "editor", "admin"):
+          raise ValueError(f"invalid role: {role}")
+      return {
+          "name": name,
+          "email": email.lower(),
+          "role": role,
+          "active": True
+      }
+
+  def deactivate_user(user: dict) -> dict:
+      """Return a new user record with active=False."""
+      return {**user, "active": False}
+
+  def promote_user(user: dict, new_role: str) -> dict:
+      """Return a new user record with the new role."""
+      if new_role not in ("viewer", "editor", "admin"):
+          raise ValueError(f"invalid role: {new_role}")
+      return {**user, "role": new_role}
+
+  def format_user(user: dict) -> str:
+      """Format user for display."""
+      status = "active" if user["active"] else "inactive"
+      return f"{user['name']} <{user['email']}> [{user['role']}] ({status})"
+
+  def filter_active(users: list[dict]) -> list[dict]:
+      """Return only active users."""
+      return [u for u in users if u["active"]]
+  ```
+
+  ### Requirements
+  - Define a User dataclass with fields: name, email, role, active
+  - Validation stays in create_user (or move to __post_init__, your choice)
+  - All functions keep the same names and return types
+    BUT now they accept/return User objects instead of dicts
+  - create_user returns a User instance
+  - deactivate_user and promote_user return NEW User instances (immutable style)
+  - format_user accepts a User, returns same string format
+  - filter_active accepts list[User], returns list[User]
+  - Email is still lowercased on creation
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  import dataclasses
+  from solution import User, create_user, deactivate_user, promote_user, format_user, filter_active
+
+  def test_user_is_dataclass():
+      assert dataclasses.is_dataclass(User)
+
+  def test_create_user_basic():
+      u = create_user("Alice", "Alice@Example.com")
+      assert u.name == "Alice"
+      assert u.email == "alice@example.com"
+      assert u.role == "viewer"
+      assert u.active is True
+
+  def test_create_user_with_role():
+      u = create_user("Bob", "bob@test.com", role="admin")
+      assert u.role == "admin"
+
+  def test_create_user_validates_name():
+      try:
+          create_user("", "a@b.com")
+          assert False, "Should raise ValueError"
+      except ValueError:
+          pass
+
+  def test_create_user_validates_email():
+      try:
+          create_user("X", "not-an-email")
+          assert False, "Should raise ValueError"
+      except ValueError:
+          pass
+
+  def test_create_user_validates_role():
+      try:
+          create_user("X", "a@b.com", role="superadmin")
+          assert False, "Should raise ValueError"
+      except ValueError:
+          pass
+
+  def test_deactivate_user():
+      u = create_user("Alice", "a@b.com")
+      d = deactivate_user(u)
+      assert d.active is False
+      assert u.active is True  # original unchanged
+
+  def test_promote_user():
+      u = create_user("Alice", "a@b.com")
+      p = promote_user(u, "editor")
+      assert p.role == "editor"
+      assert u.role == "viewer"  # original unchanged
+
+  def test_promote_validates_role():
+      u = create_user("Alice", "a@b.com")
+      try:
+          promote_user(u, "superadmin")
+          assert False
+      except ValueError:
+          pass
+
+  def test_format_user():
+      u = create_user("Alice", "alice@test.com", role="editor")
+      assert format_user(u) == "Alice <alice@test.com> [editor] (active)"
+      d = deactivate_user(u)
+      assert format_user(d) == "Alice <alice@test.com> [editor] (inactive)"
+
+  def test_filter_active():
+      u1 = create_user("A", "a@b.com")
+      u2 = create_user("B", "b@b.com")
+      u2_off = deactivate_user(u2)
+      result = filter_active([u1, u2_off])
+      assert len(result) == 1
+      assert result[0].name == "A"
