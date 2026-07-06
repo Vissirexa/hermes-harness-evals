@@ -13,9 +13,9 @@ and they regress silently.
 
 A platform toolset config regression once silently collapsed the
 web/browser toolsets. Asked to fetch and summarize a JS-heavy,
-client-rendered page, the agent hallucinated web-tool names, thrashed through
-roughly 30 raw curl attempts and a dozen vision calls — 66 tool calls, and
-the task still failed. After the harness fixes, the same scenario converged
+client-rendered page, the agent hallucinated web-tool names, then thrashed
+through roughly 30 raw curl attempts and a dozen vision calls on its way to
+66 tool calls — and the task still failed. After the harness fixes, the same scenario converged
 in **2 tool calls**: a resilient fetch, a render retry, and an honest
 "blocked" report with concrete next steps.
 
@@ -57,9 +57,9 @@ flags:
   `--category {implement,fix,refactor,extend,test_gen}` — filter which tasks
   run
 - `--runs RUNS` — repeat the suite N times for variance measurement
-- `--no-think` — disable thinking mode (see
-  [`docs/thinking-sweep.md`](docs/thinking-sweep.md) for why this is the
-  default recommendation)
+- `--no-think` — disable thinking mode (recommended for this suite;
+  [`docs/thinking-sweep.md`](docs/thinking-sweep.md) has the sweep data
+  behind that)
 - `--extra-body EXTRA_BODY` — merge extra JSON into the request body
 - `--timeout` — seconds to wait for a model response
 - `--output-dir` — where JSON results land (default `./results`)

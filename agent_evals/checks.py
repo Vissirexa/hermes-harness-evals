@@ -112,11 +112,11 @@ def hallucinated_tool(events: list[Event], max_allowed: int) -> CheckResult:
     """Count of calls to tools that don't exist (usually max 0).
 
     Catches two distinct regressions at once: the model inventing tool names,
-    and a toolset silently collapsing so real tools vanish — one recorded
-    session shows 7 web-family hallucinations in a row because the web tools
-    were never registered, followed by a long raw-curl thrash. Also counts
-    sibling calls the harness skipped because of an invalid name in the same
-    turn.
+    and a toolset silently collapsing so real tools vanish — in one recorded
+    session the web tools were never registered and this check measures 3
+    (one invented web-tool call plus two sibling calls the harness skipped in
+    the same turn), followed by a long raw-curl thrash. Skipped-sibling
+    results count alongside the direct "does not exist" errors.
     """
     names: list[str] = []
     skipped = 0
