@@ -1,0 +1,170 @@
+id: extend-pagination
+category: extend
+difficulty: mid
+chunk_size: large
+language: python
+title: "Add cursor-based pagination to a data access layer"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Add cursor-based pagination to our record store
+
+  ### Description
+  Our in-memory record store currently returns all matching records. We need
+  cursor-based pagination for the API layer. The cursor should be opaque to
+  the caller (base64-encoded).
+
+  ### Context — current implementation
+  ```python
+  from dataclasses import dataclass, field
+  from typing import Optional
+  from datetime import datetime
+
+  @dataclass
+  class Record:
+      id: str
+      title: str
+      created_at: datetime
+      data: dict = field(default_factory=dict)
+
+  class RecordStore:
+      def __init__(self):
+          self._records: dict[str, Record] = {}
+
+      def add(self, record: Record) -> None:
+          self._records[record.id] = record
+
+      def get(self, record_id: str) -> Optional[Record]:
+          return self._records.get(record_id)
+
+      def delete(self, record_id: str) -> bool:
+          if record_id in self._records:
+              del self._records[record_id]
+              return True
+          return False
+
+      def list_all(self, sort_by: str = "created_at",
+                   reverse: bool = False) -> list[Record]:
+          """Return all records, sorted."""
+          records = list(self._records.values())
+          records.sort(key=lambda r: getattr(r, sort_by), reverse=reverse)
+          return records
+
+      def count(self) -> int:
+          return len(self._records)
+  ```
+
+  ### Requirements
+  - Add a `list_paginated` method with this signature:
+      def list_paginated(self, page_size: int = 10,
+                         cursor: Optional[str] = None,
+                         sort_by: str = "created_at",
+                         reverse: bool = False) -> PaginatedResult
+
+  - Define a PaginatedResult dataclass:
+      @dataclass
+      class PaginatedResult:
+          records: list[Record]
+          next_cursor: Optional[str]  # None if no more pages
+          has_more: bool
+          total: int                  # total record count (all records, not just this page)
+
+  - Cursor is base64-encoded, containing the sort value and id of the last
+    record on the current page (so we can resume from there)
+  - First call (cursor=None) returns the first page
+  - Passing next_cursor from a result returns the next page
+  - Stable pagination: records added after pagination starts don't affect
+    the current traversal (best-effort, not transactional)
+  - Keep all existing methods working unchanged
+
+  Implement the full module (with the existing code plus your additions)
+  in solution.py. Include all imports.
+test_code: |
+  from datetime import datetime, timedelta
+  from solution import RecordStore, Record, PaginatedResult
+
+  def make_store(n=25):
+      store = RecordStore()
+      base = datetime(2025, 1, 1)
+      for i in range(n):
+          store.add(Record(
+              id=f"rec-{i:03d}",
+              title=f"Record {i}",
+              created_at=base + timedelta(hours=i),
+          ))
+      return store
+
+  def test_first_page():
+      store = make_store(25)
+      result = store.list_paginated(page_size=10)
+      assert len(result.records) == 10
+      assert result.has_more is True
+      assert result.next_cursor is not None
+      assert result.total == 25
+
+  def test_full_traversal():
+      store = make_store(25)
+      all_records = []
+      cursor = None
+      pages = 0
+      while True:
+          result = store.list_paginated(page_size=10, cursor=cursor)
+          all_records.extend(result.records)
+          pages += 1
+          if not result.has_more:
+              break
+          cursor = result.next_cursor
+      assert len(all_records) == 25
+      assert pages == 3  # 10 + 10 + 5
+
+  def test_page_size_larger_than_total():
+      store = make_store(5)
+      result = store.list_paginated(page_size=20)
+      assert len(result.records) == 5
+      assert result.has_more is False
+      assert result.next_cursor is None
+
+  def test_sorted_order():
+      store = make_store(10)
+      result = store.list_paginated(page_size=10)
+      dates = [r.created_at for r in result.records]
+      assert dates == sorted(dates)
+
+  def test_reverse_order():
+      store = make_store(10)
+      result = store.list_paginated(page_size=10, reverse=True)
+      dates = [r.created_at for r in result.records]
+      assert dates == sorted(dates, reverse=True)
+
+  def test_no_duplicates_across_pages():
+      store = make_store(25)
+      seen_ids = set()
+      cursor = None
+      while True:
+          result = store.list_paginated(page_size=7, cursor=cursor)
+          for r in result.records:
+              assert r.id not in seen_ids, f"Duplicate: {r.id}"
+              seen_ids.add(r.id)
+          if not result.has_more:
+              break
+          cursor = result.next_cursor
+      assert len(seen_ids) == 25
+
+  def test_empty_store():
+      store = RecordStore()
+      result = store.list_paginated(page_size=10)
+      assert result.records == []
+      assert result.has_more is False
+      assert result.total == 0
+
+  def test_existing_methods_still_work():
+      store = make_store(5)
+      assert store.count() == 5
+      assert store.get("rec-000") is not None
+      assert store.delete("rec-000") is True
+      assert store.count() == 4
+      all_recs = store.list_all()
+      assert len(all_recs) == 4
+
+  def test_paginated_result_is_dataclass():
+      import dataclasses
+      assert dataclasses.is_dataclass(PaginatedResult)

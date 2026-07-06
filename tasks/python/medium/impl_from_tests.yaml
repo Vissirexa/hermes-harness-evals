@@ -1,0 +1,111 @@
+id: impl-from-tests
+category: implement
+difficulty: mid
+chunk_size: large
+language: python
+title: "Implement a Markdown inline parser from its test suite"
+solution_file: inline_parser.py
+prompt: |
+  ## Ticket: Implement the InlineParser that passes all existing tests
+
+  ### Description
+  We wrote the tests first for our Markdown inline parser. Now we need the
+  implementation. The parser converts inline Markdown to HTML. It does NOT
+  handle block-level elements (headings, lists, etc.) — only inline formatting
+  within a single line of text.
+
+  ### Context — the test suite your implementation must pass
+  ```python
+  # test_inline_parser.py
+  from inline_parser import parse_inline
+
+  def test_plain_text():
+      assert parse_inline("hello world") == "hello world"
+
+  def test_bold_double_asterisk():
+      assert parse_inline("this is **bold** text") == "this is <strong>bold</strong> text"
+
+  def test_italic_single_asterisk():
+      assert parse_inline("this is *italic* text") == "this is <em>italic</em> text"
+
+  def test_inline_code():
+      assert parse_inline("use `print()` here") == "use <code>print()</code> here"
+
+  def test_bold_and_italic():
+      assert parse_inline("**bold** and *italic*") == "<strong>bold</strong> and <em>italic</em>"
+
+  def test_nested_bold_italic():
+      assert parse_inline("***bold italic***") == "<em><strong>bold italic</strong></em>"
+
+  def test_inline_link():
+      assert parse_inline("click [here](https://example.com) now") == \
+          'click <a href="https://example.com">here</a> now'
+
+  def test_multiple_links():
+      result = parse_inline("[a](http://a.com) and [b](http://b.com)")
+      assert result == '<a href="http://a.com">a</a> and <a href="http://b.com">b</a>'
+
+  def test_code_preserves_inner_formatting():
+      assert parse_inline("use `**not bold**` here") == "use <code>**not bold**</code> here"
+
+  def test_unmatched_asterisks():
+      assert parse_inline("this * is not italic") == "this * is not italic"
+
+  def test_empty_string():
+      assert parse_inline("") == ""
+
+  def test_mixed_formatting():
+      result = parse_inline("**bold** then `code` then *italic* done")
+      assert result == "<strong>bold</strong> then <code>code</code> then <em>italic</em> done"
+  ```
+
+  ### Requirements
+  - Implement a function `parse_inline(text: str) -> str`
+  - The file will be saved as `inline_parser.py` (import as `inline_parser`)
+  - Handle: **bold**, *italic*, ***bold italic***, `code`, [text](url)
+  - Backtick code spans suppress all other formatting inside them
+  - Unmatched markers (single * not closed) are left as literal text
+  - The function processes a single string (one line), not multi-line
+
+  Implement in inline_parser.py. Include all imports.
+test_code: |
+  from inline_parser import parse_inline
+
+  def test_plain_text():
+      assert parse_inline("hello world") == "hello world"
+
+  def test_bold():
+      assert parse_inline("this is **bold** text") == "this is <strong>bold</strong> text"
+
+  def test_italic():
+      assert parse_inline("this is *italic* text") == "this is <em>italic</em> text"
+
+  def test_inline_code():
+      assert parse_inline("use `print()` here") == "use <code>print()</code> here"
+
+  def test_bold_and_italic_separate():
+      assert parse_inline("**bold** and *italic*") == "<strong>bold</strong> and <em>italic</em>"
+
+  def test_nested_bold_italic():
+      assert parse_inline("***bold italic***") == "<em><strong>bold italic</strong></em>"
+
+  def test_link():
+      assert parse_inline("click [here](https://example.com) now") == \
+          'click <a href="https://example.com">here</a> now'
+
+  def test_multiple_links():
+      result = parse_inline("[a](http://a.com) and [b](http://b.com)")
+      assert result == '<a href="http://a.com">a</a> and <a href="http://b.com">b</a>'
+
+  def test_code_suppresses_formatting():
+      assert parse_inline("use `**not bold**` here") == "use <code>**not bold**</code> here"
+
+  def test_unmatched_asterisk():
+      assert parse_inline("this * is not italic") == "this * is not italic"
+
+  def test_empty():
+      assert parse_inline("") == ""
+
+  def test_mixed():
+      result = parse_inline("**bold** then `code` then *italic* done")
+      assert result == "<strong>bold</strong> then <code>code</code> then <em>italic</em> done"

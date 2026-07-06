@@ -1,0 +1,88 @@
+id: impl-retry
+category: implement
+difficulty: junior
+chunk_size: small
+language: python
+title: "Implement retry decorator with exponential backoff"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Implement retry decorator with exponential backoff
+
+  ### Description
+  We need a `retry` decorator for our API client layer. It wraps a function
+  so that if the function raises an exception, it waits and retries with
+  exponential backoff.
+
+  ### Requirements
+  - Decorator factory: retry(max_retries=3, base_delay=1.0)
+  - On failure, sleep for base_delay * (2 ** attempt_number) seconds
+    where attempt_number starts at 0 for the first retry
+  - So delays are: base_delay, base_delay*2, base_delay*4, ...
+  - If all retries are exhausted, re-raise the LAST exception
+  - If the function succeeds on any attempt, return its result
+  - Preserve the function's ability to accept *args and **kwargs
+  - max_retries means number of retries AFTER the initial call
+    (so max_retries=3 means up to 4 total calls)
+
+  ### Interface
+  ```python
+  import time
+  from functools import wraps
+
+  def retry(max_retries: int = 3, base_delay: float = 1.0):
+      """Decorator that retries a function with exponential backoff."""
+      ...
+  ```
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  import time
+  from unittest.mock import MagicMock
+  from solution import retry
+
+  def test_succeeds_immediately():
+      fn = MagicMock(return_value=42)
+      decorated = retry(max_retries=3, base_delay=0.01)(fn)
+      assert decorated() == 42
+      assert fn.call_count == 1
+
+  def test_retries_then_succeeds():
+      fn = MagicMock(side_effect=[ValueError("a"), ValueError("b"), 99])
+      decorated = retry(max_retries=3, base_delay=0.01)(fn)
+      assert decorated() == 99
+      assert fn.call_count == 3
+
+  def test_exhausts_retries_raises_last():
+      fn = MagicMock(side_effect=[ValueError("1"), TypeError("2"), RuntimeError("last")])
+      decorated = retry(max_retries=2, base_delay=0.01)(fn)
+      try:
+          decorated()
+          assert False, "Should have raised"
+      except RuntimeError as e:
+          assert str(e) == "last"
+      assert fn.call_count == 3
+
+  def test_exponential_delay():
+      fn = MagicMock(side_effect=[ValueError, ValueError, 1])
+      decorated = retry(max_retries=3, base_delay=0.05)(fn)
+      start = time.monotonic()
+      decorated()
+      elapsed = time.monotonic() - start
+      assert elapsed >= 0.12, f"Expected >= 0.12s total delay, got {elapsed:.3f}s"
+
+  def test_preserves_args_and_kwargs():
+      fn = MagicMock(return_value="ok")
+      decorated = retry(max_retries=1, base_delay=0.01)(fn)
+      result = decorated(1, "two", key="val")
+      assert result == "ok"
+      fn.assert_called_once_with(1, "two", key="val")
+
+  def test_zero_retries_raises_immediately():
+      fn = MagicMock(side_effect=ValueError("nope"))
+      decorated = retry(max_retries=0, base_delay=0.01)(fn)
+      try:
+          decorated()
+          assert False, "Should have raised"
+      except ValueError:
+          pass
+      assert fn.call_count == 1

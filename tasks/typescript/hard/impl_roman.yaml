@@ -1,0 +1,49 @@
+id: ts-impl-roman
+category: implement
+difficulty: hard
+chunk_size: medium
+language: typescript
+tier: hard
+title: "Roman numeral conversion both ways"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: Roman numerals
+
+  ### Description
+  Implement conversion to and from Roman numerals.
+
+  ### Requirements
+  - `export function intToRoman(n: number): string` for integers 1..3999.
+  - `export function romanToInt(s: string): number` for valid uppercase numerals.
+  - Use standard subtractive notation (IV = 4, IX = 9, XL = 40, XC = 90,
+    CD = 400, CM = 900).
+  - `intToRoman` throws a `RangeError` for inputs outside 1..3999.
+  - `romanToInt(intToRoman(n)) === n` for every n in range.
+
+  Implement in solution.ts and export both functions.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { intToRoman, romanToInt } from './solution';
+
+  describe('roman numerals', () => {
+    it('intToRoman known values', () => {
+      expect(intToRoman(4)).toBe('IV');
+      expect(intToRoman(9)).toBe('IX');
+      expect(intToRoman(58)).toBe('LVIII');
+      expect(intToRoman(1994)).toBe('MCMXCIV');
+    });
+    it('romanToInt known values', () => {
+      expect(romanToInt('IV')).toBe(4);
+      expect(romanToInt('LVIII')).toBe(58);
+      expect(romanToInt('MCMXCIV')).toBe(1994);
+    });
+    it('round-trips across the range', () => {
+      for (const n of [1, 3, 14, 40, 99, 400, 944, 2023, 3999]) {
+        expect(romanToInt(intToRoman(n))).toBe(n);
+      }
+    });
+    it('rejects out-of-range ints', () => {
+      expect(() => intToRoman(0)).toThrow(RangeError);
+      expect(() => intToRoman(4000)).toThrow(RangeError);
+    });
+  });

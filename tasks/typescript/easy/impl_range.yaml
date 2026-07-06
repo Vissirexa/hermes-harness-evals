@@ -1,0 +1,47 @@
+id: ts-impl-range
+category: implement
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Numeric range generator"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: range
+
+  ### Description
+  Implement a Python-style `range` that returns an array of numbers.
+
+  ### Requirements
+  - Signature: `export function range(start: number, end: number, step?: number): number[]`
+  - Half-open interval: include `start`, exclude `end`.
+  - `step` defaults to 1 and may be negative (descending).
+  - If `step` is 0, throw a `RangeError`.
+  - If `step` points away from `end` (e.g. positive step with start > end), return `[]`.
+
+  Implement in solution.ts and export `range`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { range } from './solution';
+
+  describe('range', () => {
+    it('default step', () => {
+      expect(range(0, 5)).toEqual([0, 1, 2, 3, 4]);
+    });
+    it('custom step', () => {
+      expect(range(0, 6, 2)).toEqual([0, 2, 4]);
+    });
+    it('descending', () => {
+      expect(range(5, 0, -1)).toEqual([5, 4, 3, 2, 1]);
+    });
+    it('empty when start == end', () => {
+      expect(range(3, 3)).toEqual([]);
+    });
+    it('empty when step points the wrong way', () => {
+      expect(range(0, 5, -1)).toEqual([]);
+      expect(range(5, 0, 1)).toEqual([]);
+    });
+    it('throws on step 0', () => {
+      expect(() => range(0, 5, 0)).toThrow(RangeError);
+    });
+  });

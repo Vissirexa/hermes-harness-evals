@@ -1,0 +1,140 @@
+id: extend-middleware
+category: extend
+difficulty: mid
+chunk_size: medium
+language: python
+title: "Add logging and timing middleware to a pipeline"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Add middleware support to our data processing pipeline
+
+  ### Description
+  Our pipeline processes data through a series of steps. We need to add a
+  middleware system so we can inject logging, timing, and validation without
+  modifying the core steps.
+
+  ### Context — current pipeline code
+  ```python
+  from typing import Callable, Any
+
+  class Pipeline:
+      def __init__(self):
+          self._steps: list[Callable] = []
+
+      def add_step(self, fn: Callable) -> 'Pipeline':
+          """Add a processing step. Returns self for chaining."""
+          self._steps.append(fn)
+          return self
+
+      def run(self, data: Any) -> Any:
+          """Run all steps in order, passing output of each to the next."""
+          result = data
+          for step in self._steps:
+              result = step(result)
+          return result
+  ```
+
+  ### Requirements
+  - Add an `add_middleware(fn)` method to Pipeline
+  - A middleware is a function with signature:
+      middleware(data: Any, next_step: Callable) -> Any
+    It receives the current data AND the next step to call. It can:
+      - modify data before passing to next_step
+      - call next_step(data) to continue
+      - modify or replace the result after next_step returns
+      - skip next_step entirely and return something else
+  - Middlewares wrap EVERY step (not just the whole pipeline)
+  - Middlewares are applied in the order they were added
+    (first middleware added is the outermost wrapper)
+  - Keep the existing Pipeline API working (add_step, run)
+  - add_middleware returns self for chaining
+
+  Also implement these two concrete middlewares as standalone functions:
+
+  1. `logging_middleware(data, next_step)`:
+     - Collects a log of each step's input and output
+     - Stores logs as dicts {"step": step.__name__, "input": data, "output": result}
+       in a list attribute on the middleware function itself called `logs`
+     - Initialize logging_middleware.logs = [] at module level
+     - Appending to logging_middleware.logs each time it's called
+
+  2. `timing_middleware(data, next_step)`:
+     - Records execution time of each step
+     - Stores as {"step": step.__name__, "elapsed": seconds}
+       in timing_middleware.timings (a list)
+     - Initialize timing_middleware.timings = [] at module level
+
+  Implement all of this in solution.py. Include all imports.
+test_code: |
+  from solution import Pipeline, logging_middleware, timing_middleware
+
+  def setup_function():
+      """Reset middleware state before each test."""
+      logging_middleware.logs = []
+      timing_middleware.timings = []
+
+  def test_pipeline_without_middleware():
+      p = Pipeline()
+      p.add_step(lambda x: x + 1).add_step(lambda x: x * 2)
+      assert p.run(5) == 12
+
+  def test_logging_middleware_captures():
+      def add_one(x):
+          return x + 1
+      add_one.__name__ = "add_one"
+
+      def double(x):
+          return x * 2
+      double.__name__ = "double"
+
+      p = Pipeline()
+      p.add_middleware(logging_middleware)
+      p.add_step(add_one).add_step(double)
+      result = p.run(5)
+      assert result == 12
+      assert len(logging_middleware.logs) == 2
+      assert logging_middleware.logs[0]["input"] == 5
+      assert logging_middleware.logs[0]["output"] == 6
+      assert logging_middleware.logs[1]["input"] == 6
+      assert logging_middleware.logs[1]["output"] == 12
+
+  def test_timing_middleware():
+      import time
+      def slow_step(x):
+          time.sleep(0.05)
+          return x + 1
+      slow_step.__name__ = "slow_step"
+
+      p = Pipeline()
+      p.add_middleware(timing_middleware)
+      p.add_step(slow_step)
+      p.run(0)
+      assert len(timing_middleware.timings) == 1
+      assert timing_middleware.timings[0]["elapsed"] >= 0.03
+
+  def test_middleware_can_modify_data():
+      def double_input(data, next_step):
+          return next_step(data * 2)
+
+      p = Pipeline()
+      p.add_middleware(double_input)
+      p.add_step(lambda x: x + 1)
+      # middleware doubles 5 -> 10, then step adds 1 -> 11
+      assert p.run(5) == 11
+
+  def test_middleware_can_skip_step():
+      def skip_if_negative(data, next_step):
+          if data < 0:
+              return data  # skip the step
+          return next_step(data)
+
+      p = Pipeline()
+      p.add_middleware(skip_if_negative)
+      p.add_step(lambda x: x * 2)
+      assert p.run(5) == 10
+      assert p.run(-3) == -3
+
+  def test_chaining():
+      p = Pipeline()
+      result = p.add_step(lambda x: x + 1).add_middleware(logging_middleware)
+      assert result is p

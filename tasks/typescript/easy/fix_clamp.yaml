@@ -1,0 +1,54 @@
+id: ts-fix-clamp
+category: fix
+difficulty: easy
+chunk_size: small
+language: typescript
+tier: easy
+title: "Fix a buggy clamp function"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: clamp is returning wrong values
+
+  ### Description
+  This `clamp` helper is supposed to constrain a number to an inclusive range,
+  but QA found it returns wrong results at the boundaries and never validates
+  its arguments. Fix it.
+
+  ### Current (buggy) code
+  ```typescript
+  export function clamp(value: number, min: number, max: number): number {
+    if (value < min) return max;   // bug
+    if (value > max) return min;   // bug
+    return value;
+  }
+  ```
+
+  ### Requirements
+  - `clamp(value, min, max)` returns `value` constrained to `[min, max]`.
+  - A value below `min` returns `min`; a value above `max` returns `max`.
+  - A value already in range (including equal to a bound) is returned unchanged.
+  - If `min > max`, throw a `RangeError`.
+
+  Return the corrected solution.ts exporting `clamp`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { clamp } from './solution';
+
+  describe('clamp', () => {
+    it('returns value when in range', () => {
+      expect(clamp(5, 0, 10)).toBe(5);
+    });
+    it('clamps below to min', () => {
+      expect(clamp(-3, 0, 10)).toBe(0);
+    });
+    it('clamps above to max', () => {
+      expect(clamp(42, 0, 10)).toBe(10);
+    });
+    it('is inclusive at the bounds', () => {
+      expect(clamp(0, 0, 10)).toBe(0);
+      expect(clamp(10, 0, 10)).toBe(10);
+    });
+    it('throws when min > max', () => {
+      expect(() => clamp(5, 10, 0)).toThrow(RangeError);
+    });
+  });

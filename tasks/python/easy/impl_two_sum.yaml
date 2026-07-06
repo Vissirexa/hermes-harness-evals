@@ -1,0 +1,41 @@
+id: impl-two-sum
+category: implement
+difficulty: junior
+chunk_size: small
+language: python
+tier: easy
+title: "Two-sum returning indices"
+solution_file: solution.py
+prompt: |
+  ## Ticket: two_sum
+
+  ### Description
+  Implement `two_sum(nums, target)`.
+
+  ### Requirements
+  - `two_sum(nums: list[int], target: int) -> tuple[int, int] | None`
+  - Return the indices `(i, j)` with `i < j` of two distinct elements whose
+    values sum to `target`.
+  - If multiple pairs work, return the one that COMPLETES earliest: the smallest
+    second index `j`, and for that `j` the earliest matching first index `i`.
+  - Return `None` if no pair sums to `target`.
+
+  Implement in solution.py.
+test_code: |
+  from solution import two_sum
+
+  def test_basic():
+      assert two_sum([2, 7, 11, 15], 9) == (0, 1)
+
+  def test_later_pair():
+      assert two_sum([3, 2, 4], 6) == (1, 2)
+
+  def test_earliest_completion():
+      # both (0,3) and (1,2) sum to 6; (1,2) completes first since j=2 < 3
+      assert two_sum([1, 2, 4, 5], 6) == (1, 2)
+
+  def test_none():
+      assert two_sum([1, 2, 3], 100) is None
+
+  def test_duplicates():
+      assert two_sum([3, 3], 6) == (0, 1)

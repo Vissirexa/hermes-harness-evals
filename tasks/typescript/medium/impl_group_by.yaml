@@ -1,0 +1,42 @@
+id: ts-impl-group-by
+category: implement
+difficulty: medium
+chunk_size: small
+language: typescript
+tier: medium
+title: "Group array items by a key function"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: groupBy
+
+  ### Description
+  Implement a generic `groupBy`.
+
+  ### Requirements
+  - Signature: `export function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]>`
+  - Returns an object mapping each computed key to the list of items that produced it.
+  - Items within a group preserve their original relative order.
+  - An empty input returns `{}`.
+
+  Implement in solution.ts and export `groupBy`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { groupBy } from './solution';
+
+  describe('groupBy', () => {
+    it('groups by computed key', () => {
+      const r = groupBy([1, 2, 3, 4], (n) => (n % 2 === 0 ? 'even' : 'odd'));
+      expect(r).toEqual({ odd: [1, 3], even: [2, 4] });
+    });
+    it('preserves order within groups', () => {
+      const r = groupBy(['ant', 'bee', 'apple', 'bear'], (w) => w[0]);
+      expect(r.a).toEqual(['ant', 'apple']);
+      expect(r.b).toEqual(['bee', 'bear']);
+    });
+    it('handles a single group', () => {
+      expect(groupBy([2, 4, 6], () => 'x')).toEqual({ x: [2, 4, 6] });
+    });
+    it('returns {} for empty input', () => {
+      expect(groupBy([], (x) => String(x))).toEqual({});
+    });
+  });

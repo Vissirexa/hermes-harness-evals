@@ -1,0 +1,54 @@
+id: ts-impl-set-in
+category: implement
+difficulty: hard
+chunk_size: medium
+language: typescript
+tier: hard
+title: "Immutable nested set"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: setIn
+
+  ### Description
+  Implement an immutable deep set.
+
+  ### Requirements
+  - Signature: `export function setIn(obj: any, path: (string | number)[], value: unknown): any`
+  - Return a NEW structure with `value` placed at `path`. The original `obj` and
+    its nested objects/arrays MUST NOT be mutated.
+  - Create intermediate containers when missing: a numeric path segment creates
+    (or extends) an array, a string segment creates an object.
+  - Untouched siblings are preserved (structural sharing is fine).
+  - An empty path returns `value`.
+
+  Implement in solution.ts and export `setIn`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { setIn } from './solution';
+
+  describe('setIn', () => {
+    it('sets a nested value without mutating', () => {
+      const o = { a: { b: 1 }, c: 2 };
+      const r = setIn(o, ['a', 'b'], 99);
+      expect(r).toEqual({ a: { b: 99 }, c: 2 });
+      expect(o).toEqual({ a: { b: 1 }, c: 2 }); // unchanged
+      expect(r.c).toBe(o.c); // untouched sibling shared
+    });
+    it('creates intermediate objects', () => {
+      expect(setIn({}, ['x', 'y'], 5)).toEqual({ x: { y: 5 } });
+    });
+    it('creates arrays for numeric segments', () => {
+      const r = setIn({}, ['list', 0], 'a');
+      expect(Array.isArray(r.list)).toBe(true);
+      expect(r.list[0]).toBe('a');
+    });
+    it('updates an array element immutably', () => {
+      const o = { list: [1, 2, 3] };
+      const r = setIn(o, ['list', 1], 20);
+      expect(r.list).toEqual([1, 20, 3]);
+      expect(o.list).toEqual([1, 2, 3]);
+    });
+    it('empty path returns the value', () => {
+      expect(setIn({ a: 1 }, [], 'x')).toBe('x');
+    });
+  });

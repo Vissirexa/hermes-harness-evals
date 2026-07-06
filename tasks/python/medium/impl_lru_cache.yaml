@@ -1,0 +1,124 @@
+id: impl-lru-cache
+category: implement
+difficulty: mid
+chunk_size: medium
+language: python
+title: "Implement an LRU cache with O(1) operations"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Implement LRU cache for our caching layer
+
+  ### Description
+  We need an LRU (Least Recently Used) cache. Don't use functools.lru_cache —
+  we need a standalone class because we need explicit put/get/delete and a
+  size limit.
+
+  ### Context — how it'll be used in our codebase
+  ```python
+  # From our config service
+  cache = LRUCache(capacity=100)
+
+  def get_config(key: str) -> dict:
+      cached = cache.get(key)
+      if cached is not None:
+          return cached
+      value = db.fetch_config(key)  # expensive
+      cache.put(key, value)
+      return value
+
+  # We also need to invalidate on updates
+  def update_config(key: str, value: dict):
+      db.update_config(key, value)
+      cache.delete(key)
+  ```
+
+  ### Requirements
+  - LRUCache(capacity: int) — fixed max size
+  - get(key) -> value or None if not present
+  - put(key, value) — insert or update. If at capacity, evict least recently used
+  - delete(key) -> bool — remove key, return True if it existed
+  - len() support via __len__
+  - get() and put() must both count as "using" the key (refresh its recency)
+  - O(1) for get, put, delete (use OrderedDict or doubly linked list + dict)
+
+  ### Interface
+  ```python
+  class LRUCache:
+      def __init__(self, capacity: int):
+          ...
+      def get(self, key):
+          ...
+      def put(self, key, value):
+          ...
+      def delete(self, key) -> bool:
+          ...
+      def __len__(self) -> int:
+          ...
+  ```
+
+  Implement in solution.py. Include all imports.
+test_code: |
+  from solution import LRUCache
+
+  def test_basic_put_get():
+      c = LRUCache(2)
+      c.put("a", 1)
+      assert c.get("a") == 1
+
+  def test_missing_key_returns_none():
+      c = LRUCache(2)
+      assert c.get("missing") is None
+
+  def test_eviction_on_capacity():
+      c = LRUCache(2)
+      c.put("a", 1)
+      c.put("b", 2)
+      c.put("c", 3)  # should evict "a"
+      assert c.get("a") is None
+      assert c.get("b") == 2
+      assert c.get("c") == 3
+
+  def test_get_refreshes_recency():
+      c = LRUCache(2)
+      c.put("a", 1)
+      c.put("b", 2)
+      c.get("a")      # refresh "a"
+      c.put("c", 3)   # should evict "b", not "a"
+      assert c.get("a") == 1
+      assert c.get("b") is None
+      assert c.get("c") == 3
+
+  def test_put_refreshes_existing():
+      c = LRUCache(2)
+      c.put("a", 1)
+      c.put("b", 2)
+      c.put("a", 10)   # update "a", refreshes it
+      c.put("c", 3)    # should evict "b"
+      assert c.get("a") == 10
+      assert c.get("b") is None
+
+  def test_delete():
+      c = LRUCache(3)
+      c.put("a", 1)
+      c.put("b", 2)
+      assert c.delete("a") is True
+      assert c.get("a") is None
+      assert c.delete("a") is False
+      assert len(c) == 1
+
+  def test_len():
+      c = LRUCache(3)
+      assert len(c) == 0
+      c.put("a", 1)
+      assert len(c) == 1
+      c.put("b", 2)
+      assert len(c) == 2
+      c.delete("a")
+      assert len(c) == 1
+
+  def test_capacity_one():
+      c = LRUCache(1)
+      c.put("a", 1)
+      c.put("b", 2)
+      assert c.get("a") is None
+      assert c.get("b") == 2

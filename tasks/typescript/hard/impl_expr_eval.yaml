@@ -1,0 +1,58 @@
+id: ts-impl-expr-eval
+category: implement
+difficulty: hard
+chunk_size: large
+language: typescript
+tier: hard
+title: "Arithmetic expression evaluator"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: evaluate
+
+  ### Description
+  Implement an evaluator for arithmetic expressions given as strings. Do NOT use
+  `eval`, `Function`, or any equivalent. Write a real tokenizer and parser.
+
+  ### Requirements
+  - Signature: `export function evaluate(expr: string): number`
+  - Support binary `+ - * /`, parentheses, and unary minus (e.g. `-3`, `-(2+1)`).
+  - Standard precedence: `* /` bind tighter than `+ -`; left-associative.
+  - Operands may be integers or decimals (e.g. `3`, `3.5`, `.5`).
+  - Whitespace between tokens is insignificant.
+  - Division by zero throws an `Error`.
+  - Any malformed expression (e.g. `1 +`, `2 ** 3`, `(1`, empty string) throws
+    an `Error`.
+
+  Implement in solution.ts and export `evaluate`.
+test_code: |
+  import { describe, it, expect } from 'vitest';
+  import { evaluate } from './solution';
+
+  describe('evaluate', () => {
+    it('respects precedence', () => {
+      expect(evaluate('2 + 3 * 4')).toBe(14);
+    });
+    it('handles parentheses', () => {
+      expect(evaluate('(2 + 3) * 4')).toBe(20);
+    });
+    it('is left-associative for subtraction', () => {
+      expect(evaluate('10 - 3 - 2')).toBe(5);
+    });
+    it('handles unary minus', () => {
+      expect(evaluate('-3 + 5')).toBe(2);
+      expect(evaluate('-(2 + 1) * 2')).toBe(-6);
+    });
+    it('handles decimals', () => {
+      expect(evaluate('1.5 * 2')).toBe(3);
+      expect(evaluate('.5 + .25')).toBe(0.75);
+    });
+    it('throws on division by zero', () => {
+      expect(() => evaluate('1 / 0')).toThrow();
+    });
+    it('throws on malformed input', () => {
+      expect(() => evaluate('1 +')).toThrow();
+      expect(() => evaluate('(1')).toThrow();
+      expect(() => evaluate('')).toThrow();
+      expect(() => evaluate('2 ** 3')).toThrow();
+    });
+  });

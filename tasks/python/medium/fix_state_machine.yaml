@@ -1,0 +1,151 @@
+id: fix-state-machine
+category: fix
+difficulty: mid
+chunk_size: large
+language: python
+title: "Fix three bugs in a CSV parser state machine"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Fix CSV parser bugs
+
+  ### Description
+  Our CSV parser handles quoted fields and escaped quotes but has three bugs
+  reported from production. The parser uses a state machine approach. Fix all
+  three bugs without rewriting from scratch.
+
+  ### Context — buggy implementation
+  ```python
+  from enum import Enum, auto
+  from typing import List
+
+  class State(Enum):
+      FIELD_START = auto()
+      IN_FIELD = auto()
+      IN_QUOTED = auto()
+      QUOTE_IN_QUOTED = auto()
+
+  def parse_csv_line(line: str, delimiter: str = ",") -> List[str]:
+      """Parse a single CSV line, handling quoted fields and escaped quotes.
+
+      Rules:
+      - Fields are separated by delimiter (default comma)
+      - Fields may be wrapped in double quotes: "value"
+      - Inside a quoted field, a doubled quote ("") means a literal quote
+      - Leading/trailing whitespace in unquoted fields is preserved
+      - An empty line returns ['']
+      """
+      fields = []
+      current = []
+      state = State.FIELD_START
+      i = 0
+
+      while i < len(line):
+          ch = line[i]
+
+          if state == State.FIELD_START:
+              if ch == '"':
+                  state = State.IN_QUOTED
+              elif ch == delimiter:
+                  fields.append(''.join(current))
+                  current = []
+              else:
+                  current.append(ch)
+                  state = State.IN_FIELD
+
+          elif state == State.IN_FIELD:
+              if ch == delimiter:
+                  fields.append(''.join(current))
+                  current = []
+                  state = State.FIELD_START
+              else:
+                  current.append(ch)
+
+          elif state == State.IN_QUOTED:
+              if ch == '"':
+                  state = State.QUOTE_IN_QUOTED
+              else:
+                  current.append(ch)
+
+          elif state == State.QUOTE_IN_QUOTED:
+              if ch == '"':
+                  current.append('"')
+                  state = State.IN_QUOTED
+              elif ch == delimiter:
+                  fields.append(''.join(current))
+                  current = []
+              else:
+                  current.append(ch)
+                  state = State.IN_FIELD
+
+          i += 1
+
+      fields.append(''.join(current))
+      return fields
+  ```
+
+  ### Bug reports
+  1. BUG-101: After a closing quote + delimiter, the next field's state is wrong.
+     Input: `"a","b","c"` drops into wrong state after second quoted field.
+     Root cause: After QUOTE_IN_QUOTED sees delimiter, state isn't reset to FIELD_START.
+
+  2. BUG-102: A quoted field at the end of line loses content.
+     Root cause: When the line ends in QUOTE_IN_QUOTED state, the field
+     should be finalized but the state transition is incomplete.
+
+  3. BUG-103: Empty quoted fields return wrong result.
+     Input: `a,"",c` mishandles the middle empty quoted field.
+     Root cause: QUOTE_IN_QUOTED -> delimiter transition doesn't reset state.
+
+  All three bugs share the same root cause: in the QUOTE_IN_QUOTED state,
+  when we see a delimiter, we forget to reset state to FIELD_START.
+
+  ### Requirements
+  - Fix the bugs by adding the missing state transition
+  - Keep the same function signature and overall structure
+  - Keep the State enum as-is
+
+  Return the corrected code in solution.py. Include all imports.
+test_code: |
+  from solution import parse_csv_line
+
+  def test_simple():
+      assert parse_csv_line("a,b,c") == ["a", "b", "c"]
+
+  def test_quoted():
+      assert parse_csv_line('"hello","world"') == ["hello", "world"]
+
+  def test_mixed_quoted_unquoted():
+      assert parse_csv_line('a,"b",c') == ["a", "b", "c"]
+
+  def test_quoted_with_comma():
+      assert parse_csv_line('"a,b",c') == ["a,b", "c"]
+
+  def test_escaped_quote():
+      assert parse_csv_line('"say ""hello""",b') == ['say "hello"', "b"]
+
+  def test_empty_quoted_field():
+      assert parse_csv_line('"",b,c') == ["", "b", "c"]
+
+  def test_empty_quoted_middle():
+      assert parse_csv_line('a,"",c') == ["a", "", "c"]
+
+  def test_three_quoted_fields():
+      assert parse_csv_line('"a","b","c"') == ["a", "b", "c"]
+
+  def test_quoted_at_end():
+      assert parse_csv_line('a,"b"') == ["a", "b"]
+
+  def test_empty_line():
+      assert parse_csv_line("") == [""]
+
+  def test_single_field():
+      assert parse_csv_line("hello") == ["hello"]
+
+  def test_trailing_comma():
+      assert parse_csv_line("a,b,") == ["a", "b", ""]
+
+  def test_whitespace_preserved():
+      assert parse_csv_line(" a , b ") == [" a ", " b "]
+
+  def test_many_quoted_fields():
+      assert parse_csv_line('"1","2","3","4","5"') == ["1", "2", "3", "4", "5"]

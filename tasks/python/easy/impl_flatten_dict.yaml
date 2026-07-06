@@ -1,0 +1,64 @@
+id: impl-flatten-dict
+category: implement
+difficulty: junior
+chunk_size: small
+language: python
+title: "Flatten a nested dictionary with dot-notation keys"
+solution_file: solution.py
+prompt: |
+  ## Ticket: Flatten a nested dictionary with dot-notation keys
+
+  ### Description
+  We need a utility function that takes an arbitrarily nested dictionary
+  and flattens it into a single-level dict with dot-notation keys.
+
+  ### Requirements
+  - flatten_dict(d: dict, sep: str = ".") -> dict
+  - Nested keys are joined with `sep`: {"a": {"b": 1}} -> {"a.b": 1}
+  - Empty dicts at leaves become the key mapped to {} (keep them)
+  - Non-dict values at any level are leaf values
+  - Lists are leaf values (don't recurse into lists)
+  - Handle arbitrary nesting depth
+  - Top-level keys that aren't nested stay as-is
+
+  ### Interface
+  ```python
+  def flatten_dict(d: dict, sep: str = ".") -> dict:
+      """Flatten a nested dict into dot-notation keys."""
+      ...
+  ```
+
+  Implement in solution.py.
+test_code: |
+  from solution import flatten_dict
+
+  def test_flat_dict_unchanged():
+      assert flatten_dict({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+
+  def test_one_level_nesting():
+      result = flatten_dict({"a": {"b": 1, "c": 2}, "d": 3})
+      assert result == {"a.b": 1, "a.c": 2, "d": 3}
+
+  def test_deep_nesting():
+      result = flatten_dict({"a": {"b": {"c": {"d": 42}}}})
+      assert result == {"a.b.c.d": 42}
+
+  def test_custom_separator():
+      result = flatten_dict({"a": {"b": 1}}, sep="/")
+      assert result == {"a/b": 1}
+
+  def test_lists_are_leaves():
+      result = flatten_dict({"a": {"b": [1, 2, 3]}})
+      assert result == {"a.b": [1, 2, 3]}
+
+  def test_empty_nested_dict():
+      result = flatten_dict({"a": {"b": {}}})
+      assert result == {"a.b": {}}
+
+  def test_empty_input():
+      assert flatten_dict({}) == {}
+
+  def test_mixed_nesting():
+      inp = {"x": 1, "y": {"a": 2, "b": {"c": 3}}, "z": "hello"}
+      expected = {"x": 1, "y.a": 2, "y.b.c": 3, "z": "hello"}
+      assert flatten_dict(inp) == expected

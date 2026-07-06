@@ -1,0 +1,68 @@
+id: ts-impl-event-emitter
+category: implement
+difficulty: medium
+chunk_size: medium
+language: typescript
+tier: medium
+title: "Typed event emitter with once()"
+solution_file: solution.ts
+prompt: |
+  ## Ticket: EventEmitter
+
+  ### Description
+  Implement a small synchronous event emitter.
+
+  ### Requirements
+  - `export class EventEmitter`.
+  - `on(event: string, handler: (...args: any[]) => void): void` registers a handler.
+  - `off(event: string, handler: Function): void` removes a specific handler;
+    removing one that isn't registered is a no-op.
+  - `emit(event: string, ...args: any[]): boolean` calls every handler for the
+    event in registration order with the given args. Returns `true` if at least
+    one handler ran, `false` otherwise.
+  - `once(event: string, handler: (...args: any[]) => void): void` registers a
+    handler that fires at most once, then auto-removes.
+  - The same handler may be registered multiple times and fires that many times.
+
+  Implement in solution.ts and export `EventEmitter`.
+test_code: |
+  import { describe, it, expect, vi } from 'vitest';
+  import { EventEmitter } from './solution';
+
+  describe('EventEmitter', () => {
+    it('calls handlers with args', () => {
+      const e = new EventEmitter();
+      const fn = vi.fn();
+      e.on('x', fn);
+      expect(e.emit('x', 1, 'a')).toBe(true);
+      expect(fn).toHaveBeenCalledWith(1, 'a');
+    });
+    it('emit returns false with no handlers', () => {
+      const e = new EventEmitter();
+      expect(e.emit('none')).toBe(false);
+    });
+    it('runs multiple handlers in order', () => {
+      const e = new EventEmitter();
+      const calls: number[] = [];
+      e.on('x', () => calls.push(1));
+      e.on('x', () => calls.push(2));
+      e.emit('x');
+      expect(calls).toEqual([1, 2]);
+    });
+    it('off removes a handler', () => {
+      const e = new EventEmitter();
+      const fn = vi.fn();
+      e.on('x', fn);
+      e.off('x', fn);
+      e.emit('x');
+      expect(fn).not.toHaveBeenCalled();
+    });
+    it('once fires only once', () => {
+      const e = new EventEmitter();
+      const fn = vi.fn();
+      e.once('x', fn);
+      e.emit('x');
+      e.emit('x');
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+  });
