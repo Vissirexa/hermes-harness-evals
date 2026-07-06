@@ -1,0 +1,11 @@
+{
+  "name": "hermes-evals-ts-runner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared Vitest harness for the TypeScript eval tasks. Install once with `npm install`; the sandbox symlinks this node_modules per task so nothing is reinstalled per run.",
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
