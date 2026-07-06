@@ -1,0 +1,20 @@
+id: loop-guard-levels-fyi-live
+description: >
+  LIVE regression for the original failure: with no web backend the model fell
+  into a fetch loop on levels.fyi (identical results, varying args). This spec
+  drives Hermes for real, then asserts the result/narration guards kept the run
+  bounded. Run explicitly (it invokes Hermes and can take minutes):
+    python -m agent_evals.runner agent_evals/specs/live/loop_guard_levels_fyi.yaml
+source:
+  type: live
+  db_path: ~/.hermes/profiles/<profile>/state.db   # where your install records sessions
+  scenario_prompt: >
+    Find the median total compensation for a senior software engineer at a few
+    named companies using levels.fyi, and put them in a small table.
+  timeout: 600
+  # model: your-local-model-id   # optional; defaults to the profile's model
+checks:
+  - { type: repeated_result,    max: 5, min_chars: 200 }
+  - { type: identical_tool_call, max: 8 }
+  - { type: repeated_narration, max: 3, min_chars: 40 }
+  - { type: total_tool_calls,   max: 40 }

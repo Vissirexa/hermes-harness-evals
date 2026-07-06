@@ -1,0 +1,83 @@
+id: rtk-compression-holds
+description: >
+  Two things must both hold with rtk-hermes's pre_tool_call hook active:
+  (1) a long-output terminal scenario stays under a size budget, and
+  (2) the repetition guard still fires on a synthetic loop of rtk-compressed
+  results — i.e. rtk's compression must not blind the harness's
+  _repetition_text() / _result_hash() (tool_guardrails.py) to real repeated
+  state.
+
+  How to run: this is a `source.type: live` spec, so it lives under
+  specs/live/ (excluded from the default `python -m agent_evals.runner`
+  glob) and is invoked explicitly. It drives Hermes for real through a
+  scratch HERMES_HOME (`.scratch/hermes-home/` in this repo, gitignored) so
+  the run never touches your real install's home, gateway, or profile:
+
+    export HERMES_HOME="$PWD/.scratch/hermes-home"
+    export HERMES_BIN=hermes            # or the full path to your install's binary
+    export RTK_TELEMETRY_DISABLED=1
+    python -m agent_evals.runner agent_evals/specs/live/rtk_compression_holds.yaml
+
+  The scratch home's config.yaml enables `rtk-rewrite`, points `model` at a
+  local OpenAI-compatible server (e.g. http://127.0.0.1:8000/v1), and —
+  importantly — mirrors your live profile's `tool_loop_guardrails` block
+  (hard_stop_enabled: true, repeated_result halt=5). `hard_stop_enabled`
+  defaults to False in agent/tool_guardrails.py, so without copying that
+  block the guard only ever *warns* (appends "[Tool loop warning: ...]" to
+  the tool result) and never halts — confirmed empirically: a first run
+  without it let the model loop the command 20x instead of stopping at 5.
+
+  Empirical shape (scratch home, guardrails mirrored): rtk's pre_tool_call
+  hook rewrote `git log -p -n 50` to `: RTK && rtk git log -p -n 50` —
+  confirmed by isolated reproduction plus the plugin's own "[rtk] Hermes
+  plugin registered" log line and the ~876KB-raw-to-~12KB compression
+  signature showing up on every call. The model called the tool 5 times with
+  byte-identical compressed JSON payloads (12152 bytes core payload each
+  time) before the harness's own repeated_result_halt (mirrors the live
+  profile's tuning) stopped it — i.e. the production guard's _result_hash()
+  correctly saw all 5 as the same repeated state despite rtk's compression,
+  which is the whole point of this spec. Total terminal-result bytes across
+  those 5 calls: 61672 (well under the 100000 budget below, comfortably
+  above a single call's ~12.2KB — the budget is sized for the *sum* across
+  the deliberately-repeated scenario, not one call, since
+  tool_result_size_budget totals every matching result in the transcript).
+
+  Known gap: agent_evals/checks.py's `repeated_result` does exact raw-string
+  matching, so it only counts 2 of the 5 repeats here — the harness's own
+  hard_stop_enabled guard appends an incrementing
+  "[Tool loop warning: ...; count=N; ...]" suffix to the tool result once
+  warn_after is hit, and that suffix differs every call. The production
+  guard's own `_result_hash()` (tool_guardrails.py) is JSON-aware and hashes
+  only the parsed JSON prefix, so it isn't fooled by the suffix — but this
+  repo's `repeated_result` check doesn't do that normalization, so it isn't
+  a perfect mirror of the guard for this scenario. `identical_tool_call`
+  (name+args, unaffected by result-content noise) is the reliable signal
+  here and is set below to actually breach.
+source:
+  type: live
+  db_path: .scratch/hermes-home/state.db
+  scenario_prompt: >
+    Run `git log -p -n 50` in <path-to-a-large-local-git-repo> six times in a row with
+    no other tool calls in between (identical command, identical repo state
+    each time — this is a deliberate synthetic loop, not a real workflow).
+    Report only that you ran it six times; do not summarize the diffs.
+  timeout: 300
+checks:
+  # Property 1: compression holds the size budget. Sized for the *sum* across
+  # the whole deliberately-repeated scenario (~5-6 calls x ~12.2KB compressed
+  # each, observed 61672 for 5), not a single call — tool_result_size_budget
+  # totals every matching result in the transcript. Generous headroom above
+  # the observed 61672 for repo drift (more commits growing the raw `git log
+  # -p` output further, which rtk should still compress well below this).
+  - { type: tool_result_size_budget, max: 100000, tool_name: terminal }
+  # Property 2: the repetition signal survives compression. identical_tool_call
+  # is the robust axis here (see "Known gap" above for why repeated_result's
+  # raw-string match undercounts in this specific scenario); max sits below
+  # the observed 5 so the check breaches, proving the identical-invocation
+  # signal was still visible after rtk compressed every result. expect: fail
+  # keeps this fixture honest the same way poll_thrash_20260628.yaml and
+  # toolset_collapse_20260701.yaml do — it passes while the (expected, real)
+  # breach is present, and starts failing if the breach disappears.
+  - { type: repeated_result,     max: 1, min_chars: 200 }
+  - { type: identical_tool_call, max: 4 }
+expect: fail

@@ -16,6 +16,9 @@ A spec (YAML):
       - { type: identical_tool_call, max: 8 }
       - { type: repeated_narration, max: 3, min_chars: 40 }
       - { type: total_tool_calls,  max: 60 }
+
+Live specs (source.type: live) sit under agent_evals/specs/live/ and are not
+picked up by the default glob — pass their paths explicitly.
 """
 from __future__ import annotations
 
@@ -40,6 +43,25 @@ def _load_events(source: dict):
             db_path=source["db_path"],
             active_only=source.get("active_only", True),
         )
+    if kind == "control_surface_sim":
+        from .control_surface import simulate_control_surface
+        return simulate_control_surface(source)
+    if kind == "live":
+        from .live import drive_live
+        scenario = source.get("scenario_prompt") or source.get("prompt")
+        if not scenario:
+            raise KeyError("live source needs a 'scenario_prompt'")
+        if "db_path" not in source:
+            raise KeyError("live source needs a 'db_path' (where your install records sessions)")
+        print(f"  driving Hermes live (timeout {source.get('timeout', 600)}s)...")
+        session_id, _ = drive_live(
+            scenario_prompt=scenario,
+            db_path=source["db_path"],
+            model=source.get("model"),
+            timeout=source.get("timeout", 600),
+        )
+        print(f"  captured session {session_id}")
+        return load_transcript(session_id=session_id, db_path=source["db_path"])
     raise ValueError(f"unknown source type: {kind!r}")
 
 

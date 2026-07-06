@@ -1,0 +1,18 @@
+id: poll-thrash-20260628-fixture
+description: >
+  Pinned known-bad session (expect: fail): a long configuration run polled one
+  background process 28 times back-to-back — process(action='poll') with
+  identical args every time. No single live guard axis could see it happening
+  (a mutating tool, every call successful, results varying slightly), which is
+  exactly the shape identical_tool_call catches after the fact; the harness
+  fix was pacing guidance appended to poll results. The session db is not
+  shipped: the spec pins the incident session from the install where it
+  happened and SKIPs elsewhere. To reproduce the shape, point source at a
+  recorded session of your own that thrashes a polling tool.
+expect: fail
+source:
+  type: recorded_session
+  session_id: 20260628_150254_1afdd7c8
+  db_path: path/to/state.db            # not shipped — see description
+checks:
+  - { type: identical_tool_call, max: 8 }

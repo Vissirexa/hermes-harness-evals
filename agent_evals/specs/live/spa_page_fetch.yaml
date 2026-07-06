@@ -1,0 +1,24 @@
+id: spa-page-fetch-live
+description: >
+  LIVE regression for the toolset-collapse cascade: fetching a JS-heavy,
+  client-rendered page must not produce hallucinated web-tool calls or a
+  raw-curl thrash. Passes when the platform toolsets resolve correctly (a
+  resilient fetch tool is registered) and the model routes the fetch through
+  it instead of inventing tools or shelling out. The recorded counterpart is
+  specs/toolset_collapse_20260701.yaml. Run explicitly (invokes Hermes, can
+  take minutes):
+    python -m agent_evals.runner agent_evals/specs/live/spa_page_fetch.yaml
+source:
+  type: live
+  db_path: ~/.hermes/profiles/<profile>/state.db   # where your install records sessions
+  scenario_prompt: >
+    Read the API documentation at https://redocly.github.io/redoc/ and list
+    the main endpoint groups it documents in bullet points.
+    If the page cannot be fetched, say so explicitly and stop — do not guess.
+  timeout: 600
+checks:
+  - { type: hallucinated_tool,    max: 0 }
+  - { type: repeated_result,      max: 5, min_chars: 200 }
+  - { type: identical_tool_call,  max: 8 }
+  - { type: repeated_narration,   max: 3, min_chars: 40 }
+  - { type: total_tool_calls,     max: 25 }
