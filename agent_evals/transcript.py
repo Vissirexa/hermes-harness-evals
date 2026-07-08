@@ -31,6 +31,19 @@ class Event:
     timestamp: float = 0.0
 
 
+@dataclass
+class SessionInfo:
+    """One row of the ``sessions`` table — enough to pick which sessions to audit
+    without loading their (potentially large) message history first."""
+    session_id: str
+    source: str               # 'cli' | 'cron' | 'telegram' | 'subagent' | ...
+    started_at: float         # epoch seconds
+    ended_at: float | None = None
+    message_count: int = 0
+    tool_call_count: int = 0
+    title: str = ""
+
+
 def _normalize_args(raw: str) -> str:
     try:
         return json.dumps(json.loads(raw), sort_keys=True, ensure_ascii=False)
@@ -94,6 +107,74 @@ def load_transcript(
             timestamp=ts or 0.0,
         ))
     return events
+
+
+def sessions_since(
+    db_path: str | Path,
+    since: float | None = None,
+    until: float | None = None,
+    sources: list[str] | None = None,
+    limit: int | None = None,
+) -> list[SessionInfo]:
+    """List sessions from the ``sessions`` table, newest bound first, read-only.
+
+    ``since`` / ``until`` are epoch seconds (exclusive lower bound, inclusive
+    upper) applied to ``started_at``; either may be ``None`` for an open end.
+    ``sources`` restricts to the given ``source`` values (cli, cron, telegram,
+    …). ``limit`` keeps the N most recent in the window. The result is returned
+    in chronological order (oldest first), which is the natural order to audit
+    a night's worth of sessions in.
+
+    Like :func:`load_transcript`, there is no default ``db_path`` — which
+    database holds your sessions depends on your install and profile.
+    """
+    db_path = Path(os.path.expanduser(str(db_path)))
+    if not db_path.exists():
+        raise FileNotFoundError(f"state.db not found: {db_path}")
+
+    where: list[str] = []
+    params: list = []
+    if since is not None:
+        where.append("started_at > ?")
+        params.append(since)
+    if until is not None:
+        where.append("started_at <= ?")
+        params.append(until)
+    if sources:
+        where.append(f"source IN ({','.join('?' * len(sources))})")
+        params.extend(sources)
+    clause = f"WHERE {' AND '.join(where)}" if where else ""
+
+    # Select the most-recent `limit` rows, then hand them back oldest-first.
+    order = "DESC" if limit is not None else "ASC"
+    tail = f" LIMIT {int(limit)}" if limit is not None else ""
+
+    con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        rows = con.execute(
+            f"SELECT id, source, started_at, ended_at, message_count, "
+            f"tool_call_count, title FROM sessions {clause} "
+            f"ORDER BY started_at {order}, id {order}{tail}",
+            params,
+        ).fetchall()
+    finally:
+        con.close()
+
+    infos = [
+        SessionInfo(
+            session_id=sid,
+            source=source or "",
+            started_at=started_at or 0.0,
+            ended_at=ended_at,
+            message_count=message_count or 0,
+            tool_call_count=tool_call_count or 0,
+            title=title or "",
+        )
+        for sid, source, started_at, ended_at, message_count, tool_call_count, title in rows
+    ]
+    if limit is not None:
+        infos.reverse()  # restore chronological order after the DESC LIMIT
+    return infos
 
 
 # -- projections the checks consume ----------------------------------------- #
