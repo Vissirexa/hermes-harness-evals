@@ -37,7 +37,8 @@ Independent of each other:
   verified by pytest/vitest, runnable against any OpenAI-compatible endpoint.
 - **`agent_evals/`** — harness tier: regression evals over normalized agent
   transcripts. A check registry (repeated results, repeated narration,
-  identical tool calls, hallucinated tools, total tool calls, ...) runs
+  identical tool calls, per-domain failure streaks, hallucinated tools, total
+  tool calls, ...) runs
   against transcripts loaded from recorded sessions, live Hermes drives, or
   control-surface simulation, via spec YAMLs under `agent_evals/specs/`.
 
