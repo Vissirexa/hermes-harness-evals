@@ -134,6 +134,74 @@ def hallucinated_tool(events: list[Event], max_allowed: int) -> CheckResult:
     )
 
 
+_WEB_FETCH_TOOLS = ("fetch_resilient", "web_extract", "browser_navigate")
+
+
+def _registrable_host(url: str) -> str:
+    """Lowercased netloc with a leading www. stripped — matches the live guard."""
+    from urllib.parse import urlparse
+
+    try:
+        host = (urlparse(url).netloc or "").lower()
+    except ValueError:
+        return ""
+    return host[4:] if host.startswith("www.") else host
+
+
+def domain_failure(
+    events: list[Event],
+    max_allowed: int,
+    tools: list[str] | None = None,
+) -> CheckResult:
+    """Largest per-host streak of failing web fetches (the slug-roulette loop).
+
+    The identical-call guards miss a model that mutates the URL slug on every
+    retry while staying on the same host — each call is unique, each result is
+    a fresh 404 body, and nothing repeats verbatim. In one recorded session
+    this pattern accumulated 34 fetch_resilient 404s, and those results
+    carried ``ok: true`` with ``status: 404``, so a check keyed on tool-level
+    errors alone would also have stayed quiet. Classify from the result
+    payload instead: blocked, an error, or HTTP status >= 400 is a failure; a
+    2xx/3xx success resets that host's streak. Fails open on payloads it
+    can't parse as JSON, same as the live guard. Mirrors the live
+    ``hard_stop_after.domain_failure`` guard in tool_guardrails.py.
+    """
+    import json as _json
+
+    watched = set(tools or _WEB_FETCH_TOOLS)
+    streaks: Counter = Counter()
+    peak, peak_host = 0, ""
+    for tool, content in tool_results(events):
+        if tool not in watched:
+            continue
+        try:
+            payload = _json.loads(content)
+        except (ValueError, TypeError):
+            continue  # fail open, like the guard
+        if not isinstance(payload, dict):
+            continue
+        host = _registrable_host(
+            str(payload.get("final_url") or payload.get("url") or "")
+        )
+        if not host:
+            continue
+        status = payload.get("status")
+        failed = bool(payload.get("blocked")) or bool(payload.get("error")) or (
+            isinstance(status, int) and status >= 400
+        )
+        if failed:
+            streaks[host] += 1
+            if streaks[host] > peak:
+                peak, peak_host = streaks[host], host
+        else:
+            streaks[host] = 0
+    return CheckResult(
+        "domain_failure", peak, max_allowed, peak <= max_allowed,
+        detail="" if peak <= max_allowed else
+        f"{peak} consecutive failing fetches on {peak_host} without a success",
+    )
+
+
 def tool_result_size_budget(
     events: list[Event],
     max_allowed: int,
@@ -178,6 +246,7 @@ CHECKS = {
     "repeated_narration": (repeated_narration, ("min_chars",)),
     "total_tool_calls": (total_tool_calls, ()),
     "hallucinated_tool": (hallucinated_tool, ()),
+    "domain_failure": (domain_failure, ("tools",)),
     "control_surface_breach": (control_surface_breach, ()),
     "tool_result_size_budget": (tool_result_size_budget, ("tool_name",)),
 }

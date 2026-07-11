@@ -1,0 +1,20 @@
+id: domain-failure-20260708-fixture
+description: >
+  Pinned known-bad session (expect: fail): a search backend went silently
+  unavailable and the model played URL-slug roulette against a single host —
+  95 fetch_resilient calls, 34 of them 404s on invented slugs, many with
+  ok:true plus status:404 so nothing counted as a tool-level failure. Slug
+  mutation kept every call unique, so the identical-call and identical-
+  failure guards never accumulated to their thresholds. The domain_failure
+  check mirrors the live per-host budget guard (hard_stop_after.domain_failure,
+  default 6); this spec passes while the breach is still visible in the
+  recorded transcript. The session db is not shipped: the spec pins the
+  incident session from the install where it happened and SKIPs elsewhere.
+expect: fail
+source:
+  type: recorded_session
+  session_id: 20260708_122558_80ae2cb9
+  active_only: false   # compaction hid part of the thrash; measure the whole run
+  db_path: path/to/state.db            # not shipped — see description
+checks:
+  - { type: domain_failure, max: 6 }
