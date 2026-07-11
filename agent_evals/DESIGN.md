@@ -28,6 +28,16 @@ harness hard-stops after 5 repeated results, spec `repeated_result: max: 5`) —
 then a passing spec is positive evidence the guard did its job, and a
 regression that lets a loop through surfaces here as a threshold breach.
 
+The repetition checks all key on something being identical across calls, so
+they're blind to a model that mutates the URL slug on every retry while
+staying on one host — each call is unique, each result is a fresh failure
+body, and nothing repeats verbatim for them to catch. `domain_failure` closes
+that gap by classifying success/failure from the *result payload* (blocked,
+an error, or an HTTP status >= 400 counts as a failure; a 2xx/3xx resets that
+host's streak) and tracking the largest streak per host rather than per call.
+Set its threshold to mirror your live per-domain budget guard — e.g. a
+hard-stop of 6 — the same way you would for any other check here.
+
 ### Pinned known-bad fixtures (`expect: fail`)
 
 A spec may set `expect: fail` to pin a *known-bad* session as a permanent
