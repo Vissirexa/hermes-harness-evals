@@ -22,6 +22,7 @@ picked up by the default glob — pass their paths explicitly.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -53,6 +54,18 @@ def _load_events(source: dict):
             raise KeyError("live source needs a 'scenario_prompt'")
         if "db_path" not in source:
             raise KeyError("live source needs a 'db_path' (where your install records sessions)")
+        # Refuse to drive before the session db is confirmed real: a spec
+        # still carrying the ~/.hermes/profiles/<profile>/state.db
+        # placeholder would otherwise run a live agent (yolo-approved) and
+        # only crash afterwards when the transcript can't be read back.
+        # FileNotFoundError makes it the same SKIP as a recorded_session
+        # spec pointing at a db that isn't on this machine.
+        db = Path(os.path.expanduser(str(source["db_path"])))
+        if not db.exists():
+            raise FileNotFoundError(
+                f"state.db not found: {db} — set source.db_path to your "
+                "install's session db before running live specs"
+            )
         print(f"  driving Hermes live (timeout {source.get('timeout', 600)}s)...")
         session_id, _ = drive_live(
             scenario_prompt=scenario,
