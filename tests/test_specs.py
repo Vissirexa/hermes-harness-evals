@@ -111,3 +111,14 @@ def test_live_source_missing_db_path_raises_key_error():
 def test_live_source_missing_scenario_prompt_raises_key_error():
     with pytest.raises(KeyError):
         _load_events({"type": "live", "db_path": "x.db"})
+
+
+def test_live_source_nonexistent_db_skips_before_driving():
+    """A placeholder db_path must FileNotFoundError (-> SKIP) *before* the
+    live drive launches a yolo-approved agent run against the real install."""
+    with pytest.raises(FileNotFoundError):
+        _load_events({
+            "type": "live",
+            "db_path": "~/.hermes/profiles/<profile>/state.db",
+            "scenario_prompt": "anything",
+        })
