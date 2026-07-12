@@ -105,6 +105,26 @@ def total_tool_calls(events: list[Event], max_allowed: int) -> CheckResult:
     return CheckResult("total_tool_calls", n, max_allowed, n <= max_allowed)
 
 
+def session_turns(events: list[Event], max_allowed: int) -> CheckResult:
+    """Number of assistant turns (model invocations) in the session.
+
+    Distinct from ``total_tool_calls``: a turn is one model reply, whether it
+    carried ten tool calls, one, or none, so a session with 100 calls may be
+    100 short turns or 20 dense ones. This is the O(turns) longevity signal —
+    the multiplier that per-turn and per-task harness state scales against, and
+    the regime a long-running process spends most of its memory in.
+
+    Like ``total_tool_calls`` this measures length, so a breach is not by itself
+    a defect — a legitimately long session runs long. It is therefore opt-in
+    (never in nightly_audit's default sweep, which would flag every long-but-
+    fine session) and used two ways: a generous ceiling in a --checks-file, and
+    an ``expect: fail`` pinned fixture that keeps a real long-run session on
+    record as a witness of the regime.
+    """
+    n = sum(1 for e in events if e.role == "assistant")
+    return CheckResult("session_turns", n, max_allowed, n <= max_allowed)
+
+
 _HALLUCINATED_RE = re.compile(r"^Tool '([^']+)' does not exist")
 
 
@@ -414,6 +434,7 @@ CHECKS = {
     "identical_tool_call": (identical_tool_call, ()),
     "repeated_narration": (repeated_narration, ("min_chars",)),
     "total_tool_calls": (total_tool_calls, ()),
+    "session_turns": (session_turns, ()),
     "hallucinated_tool": (hallucinated_tool, ()),
     "domain_failure": (domain_failure, ("tools",)),
     "state_mutation": (state_mutation, ("allowed_paths", "write_tools", "command_tools", "code_tools")),

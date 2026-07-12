@@ -38,6 +38,18 @@ host's streak) and tracking the largest streak per host rather than per call.
 Set its threshold to mirror your live per-domain budget guard — e.g. a
 hard-stop of 6 — the same way you would for any other check here.
 
+`session_turns` measures a different dimension: not a loop, but plain
+longevity — the number of assistant turns (model invocations) in a session.
+A turn is one model reply whether it carried ten tool calls, one, or none, so
+this is distinct from `total_tool_calls`, and it is the O(turns) multiplier
+that per-turn and per-task harness state scales against — the regime a
+long-running process spends most of its memory in. Like `total_tool_calls`
+it measures length, so a breach is not itself a defect: a legitimately long
+session runs long. It is therefore opt-in (never a nightly_audit default,
+which would flag every long-but-fine session) and used either as a generous
+ceiling in a `--checks-file` or, via `expect: fail`, to pin a real long-run
+session as a standing witness of that regime.
+
 ### Pinned known-bad fixtures (`expect: fail`)
 
 A spec may set `expect: fail` to pin a *known-bad* session as a permanent
