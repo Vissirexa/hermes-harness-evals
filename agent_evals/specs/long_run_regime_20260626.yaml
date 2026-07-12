@@ -1,0 +1,24 @@
+id: long-run-regime-20260626-fixture
+description: >
+  Pinned long-run regime witness (expect: fail) — a real 319-assistant-turn CLI
+  session (180 tool calls, "Robinhood MCP Authentication Status"). Not a defect:
+  a long session is legitimate. It is pinned because the number of assistant
+  turns is the O(turns) multiplier that per-turn and per-task harness state
+  scales against, and this is the regime where a long-running process spends
+  most of its memory. It keeps a concrete example of that regime under watch
+  after the long-run leak fixes (hermes-agent: per-task file-tool trackers now
+  cleared on task close, the per-turn tool-call Logger collapsed to a
+  process-wide singleton, TUI _fuzzy_cache and LSP _files bounded) turned those
+  structures from O(turns)/O(files) into O(1). Cross-ref upstream #62743 (TUI
+  RSS 7.4 GB on a long run). session_turns measures length, so it is opt-in, not
+  a nightly_audit default; this spec passes while the witness still exceeds the
+  ceiling. The session db is not shipped: the spec pins the session from the
+  install where it ran and SKIPs elsewhere.
+expect: fail
+source:
+  type: recorded_session
+  session_id: 20260626_224211_ad6f54
+  active_only: false   # count the whole run, not just the post-compaction tail
+  db_path: path/to/state.db            # not shipped — see description
+checks:
+  - { type: session_turns, max: 200 }
