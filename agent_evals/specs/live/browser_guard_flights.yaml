@@ -1,0 +1,33 @@
+id: browser-guard-flights-live
+description: >
+  LIVE regression for the browser-guard false-positive round (fork
+  57ad8ce36 + a27509db8; upstream #64803/#64848): drives the exact
+  Google-Flights scenario that killed 16 of 20 sessions on 2026-07-12, then
+  asserts the fixed behavior — no fabricated "I stopped retrying" ending
+  (the wrap-up turn produces real model text), snapshot repeats bounded
+  under mutation-reset semantics (browser_wait is the sanctioned poll), and
+  the run stays within loop budgets. Run explicitly (drives a real browser
+  and can take many minutes):
+    python -m agent_evals.runner agent_evals/specs/live/browser_guard_flights.yaml
+source:
+  type: live
+  db_path: ~/.hermes/profiles/<profile>/state.db   # where your install records sessions
+  scenario_prompt: >
+    Use the browser toolset. Open Google Flights, set currency to USD. Search
+    ROUND-TRIP economy, 1 adult, from HYD (Hyderabad) to PHX (Phoenix).
+    Depart 2026-10-11, return 2027-01-25. Wait for results. Report the
+    cheapest 1-STOP itineraries, especially British Airways / American /
+    Iberia via London LHR. For each: total price USD, airlines, the stop
+    city, layover duration at the stop on BOTH the outbound and return legs,
+    total trip duration, and depart/arrive times. If any price is in INR,
+    say so.
+  timeout: 900
+checks:
+  # The headline regression: a fixed harness never fabricates the halt reply.
+  - { type: canned_halt, max: 0 }
+  # Mirror the live no_progress_block_after: 3 under mutation-reset semantics;
+  # a healthy interactive run measures 1 (browser_wait/clicks reset the run).
+  - { type: idempotent_no_progress, max: 3 }
+  - { type: repeated_result,    max: 5, min_chars: 200 }
+  - { type: identical_tool_call, max: 8 }
+  - { type: total_tool_calls,   max: 60 }

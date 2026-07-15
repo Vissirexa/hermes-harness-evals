@@ -38,6 +38,23 @@ host's streak) and tracking the largest streak per host rather than per call.
 Set its threshold to mirror your live per-domain budget guard — e.g. a
 hard-stop of 6 — the same way you would for any other check here.
 
+`canned_halt` and `idempotent_no_progress` cover the browser-guard
+false-positive family (the 2026-07-12 Google-Flights incident: 16 of 20
+sessions died at `idempotent_no_progress_block` with the identical fabricated
+final reply). `canned_halt` counts assistant messages matching the harness's
+"I stopped retrying <tool> because it hit the tool-call guardrail" template —
+on a harness with the wrap-up-turn fix the model writes its own final summary,
+so live specs assert `max: 0`, and an `expect: fail` spec pins an old incident
+session as the standing witness. `idempotent_no_progress` measures the largest
+run of identical results from one read tool (default `browser_snapshot`) with
+no *successful* state-changing call between them, i.e. the guard's semantics
+*after* the mutation-reset fix: successful clicks/types/waits reset the run,
+failed mutations don't, changed content restarts at 1. Set `max` to mirror the
+live `no_progress_block_after`. Replaying a pre-fix incident session under
+these semantics measures ~1 — which is the false-positive evidence: every
+snapshot repeat followed a successful interaction, and only the old
+accumulate-across-mutations counting saw a loop.
+
 `session_turns` measures a different dimension: not a loop, but plain
 longevity — the number of assistant turns (model invocations) in a session.
 A turn is one model reply whether it carried ten tool calls, one, or none, so

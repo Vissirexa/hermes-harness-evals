@@ -40,7 +40,13 @@ def _load_events(source: dict):
         if "db_path" not in source:
             raise KeyError("recorded_session source needs a 'db_path'")
         return load_transcript(
-            session_id=source["session_id"],
+            # str(): an unquoted all-digits session id (e.g.
+            # 20260712_104031_180101) parses as a YAML 1.1 int with
+            # underscore separators, which overflows SQLite's INTEGER when
+            # bound as a query parameter. The coercion turns that crash into
+            # a clean session-not-found; the spec still has to QUOTE such ids
+            # because int parsing already destroyed the underscores.
+            session_id=str(source["session_id"]),
             db_path=source["db_path"],
             active_only=source.get("active_only", True),
         )
