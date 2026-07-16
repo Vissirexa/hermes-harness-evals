@@ -8,6 +8,7 @@ shows up here as a threshold breach.
 """
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -42,34 +43,99 @@ def _normalize_text(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+# Mirrors the harness MUTATING_TOOL_NAMES (fork de655a422). Identical short
+# success envelopes from these tools are legitimate — each call did its work —
+# so they are exempt from the empty-envelope rule in repeated_result.
+_MUTATING_TOOLS = frozenset(
+    {
+        "terminal", "execute_code", "write_file", "patch", "todo", "memory",
+        "skill_manage", "send_message", "cronjob", "delegate_task", "process",
+        "browser_click", "browser_type", "browser_press", "browser_scroll",
+        "browser_navigate", "browser_wait",
+    }
+)
+
+_EMPTY_PAYLOAD_KEYS = ("results", "items", "matches", "entries", "sessions", "data")
+
+
+def _is_empty_success_envelope(content: str) -> bool:
+    """True for a JSON success payload carrying no content — the
+    ``{"success": true, "results": [], "count": 0}`` shape from hermes-agent
+    issue #60084. Requires an explicit emptiness marker, so a bare
+    ``{"success": true}`` acknowledgment never qualifies, and any non-empty
+    payload key disqualifies."""
+    try:
+        payload = json.loads(content)
+    except (ValueError, TypeError):
+        return False
+    if not isinstance(payload, dict) or payload.get("success") is not True:
+        return False
+    empty = payload.get("count") == 0
+    for key in _EMPTY_PAYLOAD_KEYS:
+        if key in payload:
+            if payload[key] in (None, [], {}, ""):
+                empty = True
+            else:
+                return False
+    return empty
+
+
 def repeated_result(
     events: list[Event],
     max_allowed: int,
     min_chars: int = 200,
     exclude_tools: list[str] | None = None,
 ) -> CheckResult:
-    """Largest count of an identical substantial tool result.
+    """Longest consecutive run of an identical countable tool result.
 
     The classic stuck-agent signature: the same fetch/command result coming
-    back byte-identical while the agent keeps retrying.
+    back byte-identical while the agent keeps retrying. Counted as a
+    consecutive streak — any different or uncountable result in between
+    resets the run — mirroring the live guard's streak semantics (fork
+    de655a422; upstream #60087 rework): the guard's messages promise "the
+    last N calls returned the same result", so interleaved repeats
+    (A/B/A/C/A) don't count there and must not count here, or a spec breach
+    would stop implying the guard should have fired.
+
+    Countable results are the substantial ones (>= min_chars) plus short
+    empty-success envelopes (``{"success": true, "results": [], ...}``) from
+    non-mutating tools — a read tool returning the same "nothing found"
+    payload for ever-changing queries is a loop the guard catches even below
+    min_chars, while identical terse successes from mutating tools mean each
+    call did its work.
 
     ``exclude_tools`` exists for tools whose *persisted* result is a constant
     placeholder while the real payload is multimodal — a vision tool that
     stores "Image loaded into your context…" for every distinct screenshot
     would count as repetition even while the agent makes legitimate progress
-    through different images (one recorded session shows 6 such identical
-    placeholders for 6 different screenshots); the live guard sees the media
-    digests and handles the real same-image loop.
+    through different images; the live guard sees the media digests and
+    handles the real same-image loop. Their results also reset the streak,
+    since the live guard saw a (likely different) payload there.
     """
     excluded = set(exclude_tools or ("vision_analyze",))
-    results = [
-        c for t, c in tool_results(events)
-        if len(c) >= min_chars and t not in excluded
-    ]
-    n, sample = _max_repeat(results)
+    last: str | None = None
+    run = peak = 0
+    sample: str | None = None
+    for tool, content in tool_results(events):
+        countable = tool not in excluded and (
+            len(content) >= min_chars
+            or (tool not in _MUTATING_TOOLS and _is_empty_success_envelope(content))
+        )
+        if not countable:
+            last, run = None, 0
+            continue
+        norm = _normalize_text(content)
+        if norm == last:
+            run += 1
+        else:
+            last, run = norm, 1
+        if run > peak:
+            peak, sample = run, content
     return CheckResult(
-        "repeated_result", n, max_allowed, n <= max_allowed,
-        detail="" if n <= max_allowed else f"a {len(str(sample))}-char result repeated {n}x",
+        "repeated_result", peak, max_allowed, peak <= max_allowed,
+        detail="" if peak <= max_allowed else (
+            f"a {len(str(sample))}-char result repeated {peak}x in a row"
+        ),
     )
 
 
