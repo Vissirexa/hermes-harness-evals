@@ -1,0 +1,20 @@
+id: browser-guard-canned-halt-20260712-fixture
+description: >
+  Pinned known-bad session (expect: fail): one of 16/20 Google-Flights CLI
+  sessions that died at idempotent_no_progress_block on browser_snapshot and
+  ended with the fabricated "I stopped retrying..." assistant reply while
+  holding usable partial results in context. Deliberately pins only the
+  canned_halt breach: replaying this transcript under the FIXED
+  mutation-reset semantics (idempotent_no_progress check) measures ~1,
+  because every snapshot repeat followed a successful click/type — that
+  contrast is the false-positive evidence (upstream #64804/#64803). The
+  session db is not shipped: the spec pins the incident session from the
+  install where it happened and SKIPs elsewhere.
+expect: fail
+source:
+  type: recorded_session
+  # Quoted: an all-digits id parses as a YAML 1.1 int (underscore separators)
+  session_id: "20260712_104031_180101"
+  db_path: path/to/state.db            # not shipped — see description
+checks:
+  - { type: canned_halt, max: 0 }

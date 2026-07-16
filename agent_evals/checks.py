@@ -428,6 +428,111 @@ def control_surface_breach(events: list[Event], max_allowed: int) -> CheckResult
     )
 
 
+_CANNED_HALT_RE = re.compile(
+    r"I stopped retrying \S+ because it hit the tool-call guardrail",
+    re.IGNORECASE,
+)
+
+
+def canned_halt(
+    events: list[Event],
+    max_allowed: int,
+    pattern: str | None = None,
+) -> CheckResult:
+    """Count of fabricated guardrail-halt replies in the assistant narration.
+
+    When the tool-loop guardrail hard-stops a turn, the harness historically
+    injected a fixed "I stopped retrying <tool> because it hit the tool-call
+    guardrail (<code>) ..." string as the assistant's final answer, discarding
+    whatever partial results the session had produced — 16 of 20 recorded
+    Google-Flights sessions ended with exactly this line while holding usable
+    prices in context. The wrap-up-turn fix replaces the fabricated string
+    with real model text, so on a fixed harness this measures 0 (usually
+    ``max: 0``); an ``expect: fail`` spec can pin an old session as the
+    standing witness. ``pattern`` (regex) overrides the default template
+    match for forks that reworded the canned string.
+    """
+    rx = re.compile(pattern, re.IGNORECASE) if pattern else _CANNED_HALT_RE
+    hits = [t for t in assistant_texts(events) if rx.search(t)]
+    n = len(hits)
+    return CheckResult(
+        "canned_halt", n, max_allowed, n <= max_allowed,
+        detail="" if n <= max_allowed else f"fabricated guardrail reply: {hits[0][:120]!r}",
+    )
+
+
+# Browser tools that change page state; browser_wait belongs here because the
+# whole point of calling it is that the next read may legitimately differ.
+_BROWSER_MUTATING_TOOLS = (
+    "browser_click",
+    "browser_type",
+    "browser_press",
+    "browser_scroll",
+    "browser_navigate",
+    "browser_wait",
+)
+
+
+def idempotent_no_progress(
+    events: list[Event],
+    max_allowed: int,
+    tool_name: str = "browser_snapshot",
+    mutating_tools: list[str] | None = None,
+    min_chars: int = 1,
+) -> CheckResult:
+    """Largest run of identical ``tool_name`` results with no successful
+    state-changing call between them (the snapshot-thrash shape).
+
+    Mirrors the live idempotent no-progress guard *with* the mutation-reset
+    semantics: a successful mutating call (click, type, wait, ...) means the
+    world changed, so a following identical read is legitimate and the run
+    resets. A mutating result whose payload reads as failed (``error``,
+    ``success: false``, ``blocked``) does NOT reset — nothing changed. A
+    ``tool_name`` result with different content is progress and restarts the
+    run at 1, so a healthy interactive session measures 1. Set ``max`` to
+    mirror the live ``no_progress_block_after`` threshold: a breach means the
+    model thrashed reads with nothing in between and the guard should have
+    (or did) fire. Non-JSON mutating results count as successes, matching
+    the guard's failed-flag default.
+    """
+    import json as _json
+
+    mutators = set(mutating_tools or _BROWSER_MUTATING_TOOLS)
+    last: str | None = None
+    run = peak = 0
+    for tool, content in tool_results(events):
+        if tool == tool_name:
+            if len(content) < min_chars:
+                continue
+            norm = _normalize_text(content)
+            if norm == last:
+                run += 1
+            else:
+                last, run = norm, 1
+            peak = max(peak, run)
+        elif tool in mutators:
+            failed = False
+            try:
+                payload = _json.loads(content)
+                if isinstance(payload, dict):
+                    failed = (
+                        bool(payload.get("error"))
+                        or payload.get("success") is False
+                        or bool(payload.get("blocked"))
+                    )
+            except (ValueError, TypeError):
+                failed = False
+            if not failed:
+                last, run = None, 0
+    return CheckResult(
+        "idempotent_no_progress", peak, max_allowed, peak <= max_allowed,
+        detail="" if peak <= max_allowed else (
+            f"{peak} identical {tool_name} results in a row with no successful "
+            "state-changing call between them"
+        ),
+    )
+
+
 # Registry: spec `type` -> (function, extra-kwarg names it accepts)
 CHECKS = {
     "repeated_result": (repeated_result, ("min_chars", "exclude_tools")),
@@ -441,6 +546,8 @@ CHECKS = {
     "deliverable_missing": (deliverable_missing, ("paths", "write_tools")),
     "control_surface_breach": (control_surface_breach, ()),
     "tool_result_size_budget": (tool_result_size_budget, ("tool_name",)),
+    "canned_halt": (canned_halt, ("pattern",)),
+    "idempotent_no_progress": (idempotent_no_progress, ("tool_name", "mutating_tools", "min_chars")),
 }
 
 
