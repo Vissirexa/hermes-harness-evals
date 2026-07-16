@@ -48,6 +48,38 @@ class TestRepeatedResult:
         r = repeated_result(events, max_allowed=3, exclude_tools=["other_tool"])
         assert r.measured == 6 and not r.passed
 
+    def test_interleaved_repeats_do_not_count(self):
+        # Streak semantics (mirrors the live guard): A/B/A/C/A is not a loop.
+        bodies = {k: k * 300 for k in "ABC"}
+        events = [_tool_result("terminal", bodies[k]) for k in "ABACA"]
+        r = repeated_result(events, max_allowed=2)
+        assert r.measured == 1 and r.passed
+
+    def test_streak_resets_after_interruption(self):
+        a, b = "A" * 300, "B" * 300
+        events = [_tool_result("terminal", c) for c in (a, a, b, a, a, a)]
+        r = repeated_result(events, max_allowed=3)
+        assert r.measured == 3 and r.passed
+
+    def test_empty_success_envelope_streak_counts(self):
+        # The session_search shape from hermes-agent #60084: short, but an
+        # identical no-content success from a read tool is a loop.
+        envelope = '{"success": true, "results": [], "count": 0}'
+        events = [_tool_result("session_search", envelope)] * 4
+        r = repeated_result(events, max_allowed=3)
+        assert r.measured == 4 and not r.passed
+
+    def test_empty_envelope_from_mutating_tool_ignored(self):
+        envelope = '{"success": true, "results": [], "count": 0}'
+        events = [_tool_result("todo", envelope)] * 6
+        r = repeated_result(events, max_allowed=3)
+        assert r.measured == 0 and r.passed
+
+    def test_bare_success_ack_ignored(self):
+        events = [_tool_result("web_extract", '{"success": true}')] * 6
+        r = repeated_result(events, max_allowed=3)
+        assert r.measured == 0 and r.passed
+
 
 class TestIdenticalToolCall:
     def test_counts_identical_invocations(self):

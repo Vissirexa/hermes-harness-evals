@@ -1,13 +1,17 @@
 id: browser-guard-flights-live
 description: >
   LIVE regression for the browser-guard false-positive round (fork
-  57ad8ce36 + a27509db8; upstream #64803/#64848): drives the exact
+  57ad8ce36 → de655a422; upstream #64803/#64848): drives the exact
   Google-Flights scenario that killed 16 of 20 sessions on 2026-07-12, then
   asserts the fixed behavior — no fabricated "I stopped retrying" ending
   (the wrap-up turn produces real model text), snapshot repeats bounded
-  under mutation-reset semantics (browser_wait is the sanctioned poll), and
-  the run stays within loop budgets. Run explicitly (drives a real browser
-  and can take many minutes):
+  under domain-scoped mutation-reset semantics (browser_wait is the
+  sanctioned poll), and the run stays within loop budgets. Note: de655a422
+  is the first deploy where browser_wait actually resolves from the
+  toolsets — earlier installs registered the tool but never offered it to
+  the model, so runs before that date exercised the scenario without the
+  poll primitive. Run explicitly (drives a real browser and can take many
+  minutes):
     python -m agent_evals.runner agent_evals/specs/live/browser_guard_flights.yaml
 source:
   type: live
@@ -28,6 +32,8 @@ checks:
   # Mirror the live no_progress_block_after: 3 under mutation-reset semantics;
   # a healthy interactive run measures 1 (browser_wait/clicks reset the run).
   - { type: idempotent_no_progress, max: 3 }
+  # Mirrors live hard_stop_after.repeated_result: 5 — measured as the longest
+  # consecutive identical-result run (streak semantics, fork de655a422).
   - { type: repeated_result,    max: 5, min_chars: 200 }
   - { type: identical_tool_call, max: 8 }
   - { type: total_tool_calls,   max: 60 }
