@@ -599,6 +599,70 @@ def idempotent_no_progress(
     )
 
 
+def loop_cap(
+    events: list[Event],
+    max_allowed: int,
+    tool_name: str = "web_search",
+    count_batch_key: str = "",
+) -> CheckResult:
+    """Peak count of one runaway-prone tool *within a single turn*.
+
+    Mirrors the live ``tool_loop_guardrails.loop_caps`` ceilings
+    (``max_web_searches`` / ``max_subagents``) added upstream alongside the
+    fork's guard axes. Those are a different shape from every other check
+    here: they are hard per-turn ceilings on the *total* count of a tool,
+    independent of whether anything repeats, whether calls fail, or whether
+    ``hard_stop_enabled`` is set. A model that issues sixty genuinely
+    distinct web searches in one turn trips no repetition, failure, or
+    no-progress guard — only this one.
+
+    "Turn" here matches the live reset boundary: the controller's counters
+    clear in ``reset_for_turn``, which runs once per ``run_conversation``
+    (i.e. per user message), NOT per assistant reply. So a turn spans every
+    assistant event and tool result between two user messages, and this
+    check reports the peak across turns. That makes it distinct from
+    ``total_tool_calls`` (whole session, every tool) and from
+    ``session_turns`` (which counts assistant replies).
+
+    ``count_batch_key`` mirrors ``_subagent_spawn_count``: when set (e.g.
+    ``"tasks"`` for delegate_task), a call carrying a non-empty list under
+    that key counts as ``len(list)`` spawns rather than 1, so the subagent
+    ceiling reflects real children rather than invocations. Args that don't
+    parse as JSON count as 1, failing open like the guard.
+
+    Set ``max`` to mirror the live cap (both default to 50 upstream). A
+    breach means the turn blew through a ceiling the guard should have (or
+    did) enforced.
+    """
+    import json as _json
+
+    peak = turn = 0
+    for e in events:
+        if e.role == "user":
+            turn = 0
+            continue
+        for c in e.tool_calls:
+            if c.name != tool_name:
+                continue
+            n = 1
+            if count_batch_key:
+                try:
+                    parsed = _json.loads(c.args)
+                    batch = parsed.get(count_batch_key) if isinstance(parsed, dict) else None
+                    if isinstance(batch, list) and batch:
+                        n = len(batch)
+                except (ValueError, TypeError):
+                    n = 1  # fail open, like the guard
+            turn += n
+            peak = max(peak, turn)
+    unit = "spawns" if count_batch_key else "calls"
+    return CheckResult(
+        "loop_cap", peak, max_allowed, peak <= max_allowed,
+        detail="" if peak <= max_allowed else
+        f"{peak} {tool_name} {unit} in a single turn (cap {max_allowed})",
+    )
+
+
 # Registry: spec `type` -> (function, extra-kwarg names it accepts)
 CHECKS = {
     "repeated_result": (repeated_result, ("min_chars", "exclude_tools")),
@@ -614,6 +678,7 @@ CHECKS = {
     "tool_result_size_budget": (tool_result_size_budget, ("tool_name",)),
     "canned_halt": (canned_halt, ("pattern",)),
     "idempotent_no_progress": (idempotent_no_progress, ("tool_name", "mutating_tools", "min_chars")),
+    "loop_cap": (loop_cap, ("tool_name", "count_batch_key")),
 }
 
 

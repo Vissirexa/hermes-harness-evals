@@ -15,3 +15,8 @@ checks:
   - { type: identical_tool_call, max: 8 }
   - { type: repeated_narration, max: 3, min_chars: 40 }
   - { type: total_tool_calls,   max: 120 }
+  # Per-turn ceilings, mirroring tool_loop_guardrails.loop_caps (both default
+  # to 50 upstream). Unlike the checks above these count distinct calls, so
+  # they catch a runaway search/delegation loop in which nothing repeats.
+  - { type: loop_cap, max: 50, tool_name: web_search }
+  - { type: loop_cap, max: 50, tool_name: delegate_task, count_batch_key: tasks }

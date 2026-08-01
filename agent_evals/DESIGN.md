@@ -67,6 +67,22 @@ which would flag every long-but-fine session) and used either as a generous
 ceiling in a `--checks-file` or, via `expect: fail`, to pin a real long-run
 session as a standing witness of that regime.
 
+`loop_cap` mirrors the harness's `tool_loop_guardrails.loop_caps` ceilings
+(`max_web_searches` / `max_subagents`), which are a different shape from every
+other check here. They are hard per-turn ceilings on the *total* count of one
+tool — independent of repetition, of failure classification, and of
+`hard_stop_enabled`. A model issuing sixty genuinely distinct web searches in
+one turn trips no repetition, failure, or no-progress guard; only this one
+catches it. "Turn" matches the live reset boundary: the controller clears its
+counters in `reset_for_turn`, which runs once per `run_conversation` (per user
+message), *not* per assistant reply — so a turn spans every assistant event
+and tool result between two user messages, and the check reports the peak
+across turns. That makes it distinct from `total_tool_calls` (whole session,
+every tool) and from `session_turns` (which counts the replies themselves).
+For the subagent axis, set `count_batch_key: tasks` to mirror
+`_subagent_spawn_count`: a batched `delegate_task` counts `len(tasks)`
+children rather than one invocation, so the ceiling reflects real spawns.
+
 ### Pinned known-bad fixtures (`expect: fail`)
 
 A spec may set `expect: fail` to pin a *known-bad* session as a permanent
